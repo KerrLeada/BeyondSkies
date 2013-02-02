@@ -1,0 +1,2 @@
+// Generates a new galaxy
+function generateGalaxy()
