@@ -1,5 +1,5 @@
 // Generates a new universe
-function createUniverse() {
+function createUniverse(civs) {
     // Create the universe
     var uni = new world.Universe(10, 10);
     

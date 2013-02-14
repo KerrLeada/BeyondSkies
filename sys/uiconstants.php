@@ -10,6 +10,7 @@ class UIStatic {
     const Colonies = "tmbColonies";
     const Ships = "tmbShips";
     const Research = "tmbResearch";
+    const ShowGrid = "tmbShowGrid";
     const SystemView = "contentSysView";
     const StarmapView = "contentStarmapCanvas";
     const BottomDisp = "dataBottomdisp";

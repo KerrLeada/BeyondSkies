@@ -1,26 +1,22 @@
 // Contains useful functions intended for reuse
 var core = new function() {
-    // Creates a new array by applying function fn to all elements of xs 
-    this.map = function(xs, fn) {
-        var result = [];
-        for (var i = 0; i < xs.length; ++i) {
-            result.push(fn(xs[i]));
-        }
-        return result;
+    // Pythagoras theorem
+    this.pythagoras = function(x, y) {
+        return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     };
-
-    this.fold = function(xs, state, fn) {
-        var acc = state;
-        for (var i = 0; i < xs.length; ++i) {
-            acc = fn(acc, xs[i]);
-        }
-        return acc;
-    }
     
     // A simple hashtable
-    var MyHashtable = function() {
+    var MyHashtable = function(other) {
+        var me = this;
         this._elems = {};
         this.size = 0;
+        
+        // If there was a provided hashtable, add its contents
+        if (other) {
+            other.foreach(function(key, value) {
+                me.set(key, value);
+            });
+        }
     };
     
     // Checks if the hashtable is empty or not
@@ -56,6 +52,22 @@ var core = new function() {
         return undefined;
     };
     
+    // Searches through all the hashtable elements for the best match for
+    // the comparator comp and returns it, or undefined if there was no
+    // elements in the hashtable
+    MyHashtable.prototype.findBest = function(comp) {
+        var elems = this._elems;
+        var chosen = undefined;
+        for (var k in elems) {
+            if (elems.hasOwnProperty(k)) {
+                if (chosen === undefined || comp(chosen, elems[k])) {
+                    chosen = elems[k];
+                }
+            }
+        }
+        return chosen;
+    };
+    
     // Returns the values
     MyHashtable.prototype.values = function() {
         var results = new Array();
@@ -89,8 +101,8 @@ var core = new function() {
         }
     };
     
-    // Adds a new value with the given key
-    MyHashtable.prototype.put = function(key, value) {
+    // Adds or sets a new value with the given key
+    MyHashtable.prototype.set = function(key, value) {
         this._elems[key] = value;
         this.size += 1;
     };
