@@ -230,6 +230,22 @@ var ui = new function() {
             });
         }
         
+        // Draws a star
+        function drawStar(ctx, x, y, color) {
+            var halo = ctx.createRadialGradient(x, y, 3, x, y, 7);
+            halo.addColorStop(0, color);
+            halo.addColorStop(1, 'black');
+            
+            var star = ctx.createRadialGradient(x, y, 1, x, y, 2);
+            star.addColorStop(0, 'white');
+            star.addColorStop(1, color);
+            
+            ctx.fillStyle = halo;
+            drawCircle(ctx, x, y, 7);
+            ctx.fillStyle = star;
+            drawCircle(ctx, x, y, 3);
+        }
+        
         // Draws the canvas
         this.display = function(player, canvas) {
             me._adjustCanvasSize(canvas);
@@ -264,8 +280,9 @@ var ui = new function() {
                 var pos = sys.pos;
                 var x = pos.col * cellW;
                 var y = pos.row * cellH;
-                ctx.fillStyle = getStarColor(sys);
-                drawCircle(ctx, x + halfCellW, y + halfCellH, starScale);
+                //ctx.fillStyle = getStarColor(sys);
+                //drawCircle(ctx, x + halfCellW, y + halfCellH, starScale);
+                drawStar(ctx, x + halfCellW, y + halfCellH, getStarColor(sys));
                 if (player.visited(sys)) {
                     me._drawSystemInfo(player, ctx, sys, x, y);
                 }
