@@ -134,7 +134,7 @@ var world = new function() {
     };
     
     this.DefaultSpecs = {
-        ColonyShip : new ns.ShipSpec('Colony Ship', 1, 5, 1, 0),
+        ColonyShip : new ns.ShipSpec('Colony Ship', 1, 20, 1, 0),
         Scout : new ns.ShipSpec('Scout', 1, 5000, 2, 0)
     };
 
@@ -150,38 +150,75 @@ var world = new function() {
         VULCANIC: 'Vulcanic',
         TORN: 'Torn',
         OCEAN: 'Ocean',
-        EXOTIC: 'Exotic'
+        EXOTIC: 'Exotic',
+        GAS_GIANT: 'Gas giant',
+        ICE_GIANT: 'Ice giant',
+        ASTEROID_FIELD: 'Asteroid field'
     };
     
     // Returns a list of the planet types
     this.getPlanetTypes = function() {
-        var types = [];
-        for (var pt in ns.PlanetType) {
-            if (ns.PlanetType.hasOwnProperty(pt)) {
-                types.push(ns.PlanetType[pt]);
-            }
-        }
-        return types;
+        return core.listOwn(ns.PlanetType);
     };
     
     // Represents a planet
-    this.Planet = function(type) {
+    this.Planet = function(sys, type) {
+        var me = this;
         this.type = type;
+        this.sys = sys;
         this.owner = null;
+        
+        // Colonize the planet with the given ship
+        this.colonize = function(player) {
+            /*
+            me.owner = ship.owner;
+            sys.ships.remove(ship.uid);
+            me.owner.systems.set(sys.sysName, sys);
+            sys._colonized(me.owner, me);
+            */
+            var ship = sys.ships.find(function(_, s) {
+                return s.owner === player && s.type === ns.DefaultSpecs.ColonyShip.type;
+            });
+            if (ship) {
+                me.owner = player;
+                sys.ships.remove(ship.uid);
+                me.owner.systems.set(sys.sysName, sys);
+                sys._colonized(me.owner, me);
+            }
+        };
     };
 
     // Represents a position
     this.pos = function(row, col) {
         return {row : row, col : col};
     };
+    
+    this.StarType = {
+        RED: "Red",
+        YELLOW: "Yellow",
+        BLUE: "Blue"
+    };
+    
+    this.getStarTypes = function() {
+        return core.listOwn(ns.StarType);
+    };
 
     // Represents a star system
-    this.StarSystem = function(name, pos, planets) {
+    this.StarSystem = function(name, pos, starType) {
         var me = this;
         this.pos = pos;
         this.ships = new core.Hashtable();
-        this.planets = planets;
+        this.planets = [];
         this.sysName = name;
+        this.starType = starType;
+        this._civs = new core.Hashtable();
+        
+        // Internal method called when a planet is colonized
+        this._colonized = function(civ, planet) {
+            if (!me._civs.has(civ.civName)) {
+                me._civs.set(civ.civName, civ);
+            }
+        };
         
         // Ships enters a system
         this.enter = function(ships) {
@@ -201,20 +238,14 @@ var world = new function() {
 
         // Returns the civilizations that has colonies in this system
         this.civs = function() {
-            var found = [];
-            for (var p in me.planets) {
-                var owner = me.planets[p].owner;
-                if (owner != null)
-                    found.push(owner);
-            }
-            return found;
+            return me._civs.values();
         };
         
         // Checks if the given civilization has ships in the system
-        this.hasShips = function(civ) {
+        this.hasShips = function(civ, pred) {
             var ships = me.ships.values();
             for (var i = 0; i < ships.length; ++i) {
-                if (ships[i].owner === civ) {
+                if (ships[i].owner === civ && (pred === undefined || pred(ships[i]))) {
                     return true;
                 }
             }
@@ -354,8 +385,9 @@ var world = new function() {
         this._visitedSystems = new core.Hashtable();
         this._visitedSystems.set(home.sysName, [this]);
 
-        // The homeworld is the planet closest to the star
+        // The homeworld is the planet closest to the star 
         home.planets[0].owner = this;
+        home._colonized(this, home.planets[0]);
         
         // Visit a system
         this.visit = function(sys) {
@@ -369,18 +401,16 @@ var world = new function() {
         
         // Returns the civilizations the current civilization knows exist in the given system
         this.civsIn = function(sys) {
-            if (me.systems.has(sys.sysName)) {
-                return sys.civs();
-            }
-            return me._visitedSystems.get(sys.sysName);
+            return me.systems.has(sys.sysName) ?
+                   sys.civs():
+                   me._visitedSystems.get(sys.sysName);
         };
         
         // Returns the ships the current civilization knows exist in the system
         this.shipsIn = function(sys) {
-            if (me.visited(sys)) {
-                return sys.ships.values();
-            }
-            return [];
+            return me.visited(sys) ?
+                   sys.ships.values():
+                   [];
         };
     };
 };

@@ -43,6 +43,17 @@ var ui = new function() {
         };
     };
     
+    // Get the star color of the system
+    function getStarColor(sys) {
+        if (sys.starType === world.StarType.BLUE) {
+            return 'blue';
+        }
+        else if (sys.starType === world.StarType.RED) {
+            return 'red';
+        }
+        return 'yellow';
+    }
+    
     this._starmapFleetImg = new Image();
     this._starmapFleetImg.src = 'grfx/ship.png';
     
@@ -138,14 +149,14 @@ var ui = new function() {
             
             // Display the name of the system
             var indicator = sys.hasShips(player) ? '*' : '';
-            ctx.fillText(sys.sysName + indicator, x + halfCellW, y + cellH + 10);
+            ctx.fillText(sys.sysName + indicator, x + halfCellW, y + cellH + 15);
             
             // Display more data
             var owners = player.civsIn(sys);
             if (owners.length > 0) {
                 var msg = '(' + owners.map(function(x) { return x.civName; }).join(', ') + ')';
                 ctx.font = '15px ' + me.style.font;
-                ctx.fillText(msg, x + halfCellW, y + cellH + 30);
+                ctx.fillText(msg, x + halfCellW, y + cellH + 35);
                 ctx.font = '20px ' + me.style.font;
             }
             
@@ -246,7 +257,6 @@ var ui = new function() {
             // Setup the text drawing
             ctx.font = '20px ' + me.style.font;
             ctx.textAlign = 'center';
-            ctx.fillStyle = 'yellow';
             
             // Draw the stars
             for (var i = 0; i < systems.length; ++i) {
@@ -254,6 +264,7 @@ var ui = new function() {
                 var pos = sys.pos;
                 var x = pos.col * cellW;
                 var y = pos.row * cellH;
+                ctx.fillStyle = getStarColor(sys);
                 drawCircle(ctx, x + halfCellW, y + halfCellH, starScale);
                 if (player.visited(sys)) {
                     me._drawSystemInfo(player, ctx, sys, x, y);
@@ -342,7 +353,7 @@ var ui = new function() {
     
     // Represents the system view
     // The selector is a function object that returns a system
-    this.SystemView = function(uni, selector) {
+    this.SystemView = function(uni, shipBar, selector) {
         var me = this;
         this._selector = selector;
         
@@ -359,6 +370,9 @@ var ui = new function() {
         this._mapping[world.PlanetType.TORN] = 'torn_planet.png';
         this._mapping[world.PlanetType.OCEAN] = 'ocean_planet.png';
         this._mapping[world.PlanetType.EXOTIC] = 'exotic_planet.png';
+        this._mapping[world.PlanetType.GAS_GIANT] = 'gas_giant.png';
+        this._mapping[world.PlanetType.ICE_GIANT] = 'ice_giant.png';
+        this._mapping[world.PlanetType.ASTEROID_FIELD] = 'asteroid_field.png';
         
         this.sys = function() {
             return me._selector();
@@ -369,7 +383,12 @@ var ui = new function() {
             var sys = me._selector();
             var sysname = sys.sysName;
             var count = 0;
-            parent.html('').append(
+            var star = getStarColor(sys);
+            var colinfos = [];
+            var hasColship = sys.ships.exists(function(_, ship) {
+                return ship.owner === player && colonyShip(ship);
+            });
+            parent.empty().append(
                 table().addClass('sysview').append(
                     tr().append(
                         td().html(sysname + ' system')
@@ -377,7 +396,7 @@ var ui = new function() {
                     
                     tr().append(
                         td().append(
-                            img().attr('src', 'grfx/star.png')
+                            img().attr('src', 'grfx/' + star + '_star.png')
                         ),
                         
                         sys.planets.map(function(planet) {
@@ -388,8 +407,8 @@ var ui = new function() {
                                         p().append(
                                             sysname + ' ' + count,
                                             [
-                                                div().addClass('dispSmall').html(planet.type + ' world'),
-                                                div().addClass('dispSmall').html(colonyInfo(planet, player))
+                                                div().addClass('dispSmall').html(worldInfo(planet.type)),
+                                                colonyInfo(player, parent, planet, hasColship)
                                             ]
                                         )
                                     )
@@ -399,15 +418,53 @@ var ui = new function() {
                 )
             );
         };
-    };
-
-    // Displays colony info
-    function colonyInfo(p, player) {
-        if (p.owner != null) {
-            return (p.owner === player) ? 'Colonized' : 'Colonized by ' + p.owner.civName;
+        
+        // What to show about a planet type
+        function worldInfo(planetType) {
+            var info = planetType;
+            if (info !== world.PlanetType.GAS_GIANT &&
+                info !== world.PlanetType.ICE_GIANT &&
+                info !== world.PlanetType.ASTEROID_FIELD)
+                info += ' world';
+            return info;
         }
-        return '---';
-    }
+        
+        // Creates the colony information div
+        function colonyInfo(player, parent, planet, hasColShip) {
+            var result = div().addClass('dispSmall');
+            if (planet.owner != null) {
+                result.html(planet.owner === player ? 'Colonized' : 'Colonized by ' + planet.owner.civName);
+            }
+            else if (hasColShip) {
+                var btn = button().attr('type', 'button').html('Colonize');
+                btn.click(function() {
+                    // Colonize the planet and update the ship bar
+                    planet.colonize(player);
+                    shipBar(planet.sys);
+                    
+                    // Check if there are more colony ships
+                    if (planet.sys.hasShips(player, colonyShip)) {
+                        // If there are, just replace the button with the text 'Colonized'
+                        result.empty().html('Colonized');
+                    }
+                    else {
+                        // If there are not any more colony ships, redisplay the system
+                        me.display(player, parent);
+                    }
+                });
+                result.append(btn);
+            }
+            else {
+                result.html('---');
+            }
+            return result;
+        }
+        
+        // Checks if a ship is a colony ship
+        function colonyShip(ship) {
+            return ship.type === world.DefaultSpecs.ColonyShip.type;
+        }
+    };
     
     // Creates a new list of ships
     this.updateShipBar = function(player, parent, sys, onClick, onDblClick) {
@@ -427,7 +484,7 @@ var ui = new function() {
         });
         
         // Add the ship list
-        parent.html('').append(
+        parent.empty().append(
             div().append(
                 'Ships: ',
                 ships.length === 0 ? 'N/A' : ships

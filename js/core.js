@@ -5,6 +5,17 @@ var core = new function() {
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     };
     
+    // Lists the properties of the given object (does not check the prototype)
+    this.listOwn = function(obj) {
+        var result = [];
+        for (var pt in obj) {
+            if (obj.hasOwnProperty(pt)) {
+                result.push(obj[pt]);
+            }
+        }
+        return result;
+    };
+    
     // A simple hashtable
     var MyHashtable = function(other) {
         var me = this;
@@ -29,6 +40,11 @@ var core = new function() {
         return this._elems[key] !== undefined;
     };
     
+    // Checks if there exists an element that passes the given predicate
+    MyHashtable.prototype.exists = function(pred) {
+        return this.find(pred) !== undefined;
+    };
+    
     // Used to move loop through the hashtable
     MyHashtable.prototype.foreach = function(f) {
         var elems = this._elems;
@@ -50,6 +66,13 @@ var core = new function() {
             }
         }
         return undefined;
+    };
+    
+    // Attempts to find an element that matches the given predicate, or
+    // return the given default value.
+    MyHashtable.prototype.tryFind = function(defaultResult, pred) {
+        var result = this.find(pred);
+        return result !== undefined ? result : defaultResult;
     };
     
     // Searches through all the hashtable elements for the best match for
