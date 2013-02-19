@@ -4,6 +4,7 @@
 body
 {
     background-color: black;
+    background-image: url('../grfx/background.jpg');
     color: #4444FF;
     margin: 0;
     padding: 0;
@@ -82,6 +83,11 @@ table.sysview
     border-width: 1px;
     border-color: blue;
 }*/
+
+img.hiddenImg
+{
+    display: none;
+}
 
 span.righted
 {

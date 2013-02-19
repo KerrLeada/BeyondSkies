@@ -43,20 +43,6 @@ var ui = new function() {
         };
     };
     
-    // Get the star color of the system
-    function getStarColor(sys) {
-        if (sys.starType === world.StarType.BLUE) {
-            return 'blue';
-        }
-        else if (sys.starType === world.StarType.RED) {
-            return 'red';
-        }
-        return 'yellow';
-    }
-    
-    this._starmapFleetImg = new Image();
-    this._starmapFleetImg.src = 'grfx/ship.png';
-    
     // Represents the starmap
     this.Starmap = function(uni, selected) {
         var me = this;
@@ -66,7 +52,10 @@ var ui = new function() {
             font: 'Calibri',
             textColor: 'blue',
             selectionColor: 'red',
-            gridColor: '#111111'
+            highlightColor: 'red',
+            gridColor: '#111111',
+            courseColor: '#222222',
+            starScale: 10
         };
         
         this._highlighted = null;
@@ -81,11 +70,10 @@ var ui = new function() {
         var cellH = null;
         var halfCellW = null;
         var halfCellH = null;
-        var starScale = 5;
-        var halfStarScale = starScale / 2;
         var fltScale = 10;
         var halfFltScale = fltScale / 2;
         
+        // Returns the selected system
         this.selected = function() {
             return me._selected;
         };
@@ -95,6 +83,7 @@ var ui = new function() {
             return me._highlighted;
         };
         
+        // Toggles the grid on or off
         this.toggleGrid = function(show) {
             me._showGrid = !me._showGrid;
         };
@@ -108,10 +97,12 @@ var ui = new function() {
             }
         };
         
+        // Selects a range
         this.selectRange = function(range) {
             me._range = range;
         }
         
+        // Deselects a range
         this.deselectRange = function() {
             me._range = null;
         };
@@ -129,7 +120,10 @@ var ui = new function() {
                 me._hrow = row;
                 me._hcol = col;
                 var sys = uni.sysAt(row, col);
-                if (sys !== undefined) {
+                
+                // If there was a system at the given location, if it was not the selected system and, assuming a range exists, the
+                // system is in range then set the system to be highlighted
+                if (sys !== undefined && sys !== me._selected && (me._range === null || me._selected.distanceTo(sys) <= me._range)) {
                     me._highlighted = sys;
                     updated = true;
                 }
@@ -212,7 +206,7 @@ var ui = new function() {
             ctx.stroke();
             
             // Draw the ship
-            ctx.drawImage(ns._starmapFleetImg, x - halfFltScale, y - halfFltScale, fltScale, fltScale);
+            ctx.drawImage(me.style.fleetImg, x - halfFltScale, y - halfFltScale, fltScale, fltScale);
             
             // Draw the eta
             var eta = Math.ceil(dist/fleet.speed);
@@ -222,7 +216,7 @@ var ui = new function() {
         // Draw what lies in deep space
         function drawDeepSpace(ctx) {
             ctx.lineWidth = 1;
-            ctx.strokeStyle = me.style.gridColor;
+            ctx.strokeStyle = me.style.courseColor;
             ctx.fillStyle = me.style.textColor;
             ctx.font = '10px ' + me.style.font;
             uni.deepspace.fleets.foreach(function(_, entry) {
@@ -230,32 +224,31 @@ var ui = new function() {
             });
         }
         
-        // Draws a star
-        function drawStar(ctx, x, y, color) {
-            var halo = ctx.createRadialGradient(x, y, 3, x, y, 7);
-            halo.addColorStop(0, color);
-            halo.addColorStop(1, 'black');
-            
-            var star = ctx.createRadialGradient(x, y, 1, x, y, 2);
-            star.addColorStop(0, 'white');
-            star.addColorStop(1, color);
-            
-            ctx.fillStyle = halo;
-            drawCircle(ctx, x, y, 7);
-            ctx.fillStyle = star;
-            drawCircle(ctx, x, y, 3);
+        // Get the star color of the system
+        function getStarImg(starType) {
+            var img = null;
+            if (starType === world.StarType.BLUE) {
+                img = me.style.blueStarImg;
+            }
+            else if (starType === world.StarType.RED) {
+                img = me.style.redStarImg;
+            }
+            else if (starType === world.StarType.YELLOW) {
+                img = me.style.yellowStarImg;
+            }
+            else {
+                throw 'BASTARDS!!!';
+            }
+            return img;
         }
         
         // Draws the canvas
         this.display = function(player, canvas) {
             me._adjustCanvasSize(canvas);
             
-            // Get the context
+            // Get the context and clear the canvas
             var ctx = canvas.getContext('2d');
-            
-            // Clear the canvas
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // Draw the grid, if it should
             if (me._showGrid) {
@@ -269,32 +262,32 @@ var ui = new function() {
             
             // Setup the systems, the half cell sizes and the radius for the stars
             var systems = uni.getSystems();
+            var selected = me._selected;
             
-            // Setup the text drawing
+            // Setup the text drawing and the star scale
             ctx.font = '20px ' + me.style.font;
             ctx.textAlign = 'center';
+            var starScale = me.style.starScale;
+            var halfStarScale = starScale / 2;
             
             // Draw the stars
             for (var i = 0; i < systems.length; ++i) {
                 var sys = systems[i];
                 var pos = sys.pos;
-                var x = pos.col * cellW;
-                var y = pos.row * cellH;
-                //ctx.fillStyle = getStarColor(sys);
-                //drawCircle(ctx, x + halfCellW, y + halfCellH, starScale);
-                drawStar(ctx, x + halfCellW, y + halfCellH, getStarColor(sys));
+                var x = pos.col * cellW + halfCellW;
+                var y = pos.row * cellH + halfCellH;
+                ctx.drawImage(getStarImg(sys.starType), x - halfStarScale, y - halfStarScale, starScale, starScale);
                 if (player.visited(sys)) {
                     me._drawSystemInfo(player, ctx, sys, x, y);
                 }
                 
-                // TODO: Temporary solution, find a better way
-                if (me._range !== null) {
-                    var selsys = me._selected;
-                    if (uni.distance(selsys, sys) > me._range) {
-                        ctx.font = '10px ' + me.style.font;
-                        ctx.fillText('Not in range :P', x + halfCellW, y + cellH - 30);
-                        ctx.font = '20px ' + me.style.font;
-                    }
+                // Draw a transperant circle around the system, darkening it, if there is a range and the system
+                // is not in that range
+                if (me._range !== null && selected.distanceTo(sys) > me._range) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, halfStarScale, 0, 2*Math.PI);
+                    ctx.fill();
                 }
             }
             
@@ -305,7 +298,8 @@ var ui = new function() {
             strokedCircle(ctx, pos.col * cellW + halfCellW, pos.row * cellH + halfCellH, 15);
             
             // Draw the hover circle (if one should be drawn)
-            if (me._highlighted !== null && me._highlighted !== me._selected) {
+            if (me._highlighted !== null) {
+                ctx.strokeStyle = me.style.highlightColor;
                 ctx.lineWidth = 1;
                 pos = me._highlighted.pos;
                 strokedCircle(ctx, pos.col * cellW + halfCellW, pos.row * cellH + halfCellH, 15);
@@ -391,6 +385,13 @@ var ui = new function() {
         this._mapping[world.PlanetType.ICE_GIANT] = 'ice_giant.png';
         this._mapping[world.PlanetType.ASTEROID_FIELD] = 'asteroid_field.png';
         
+        // Setup the mapping of the star type to the images (THIS SUCKS AS WELL!!!)
+        this._starType = {};
+        this._starType[world.StarType.BLUE] = 'blue_star.png';
+        this._starType[world.StarType.RED] = 'red_star.png';
+        this._starType[world.StarType.YELLOW] = 'yellow_star.png';
+        
+        // Returns the system
         this.sys = function() {
             return me._selector();
         };
@@ -400,7 +401,6 @@ var ui = new function() {
             var sys = me._selector();
             var sysname = sys.sysName;
             var count = 0;
-            var star = getStarColor(sys);
             var colinfos = [];
             var hasColship = sys.ships.exists(function(_, ship) {
                 return ship.owner === player && colonyShip(ship);
@@ -413,7 +413,7 @@ var ui = new function() {
                     
                     tr().append(
                         td().append(
-                            img().attr('src', 'grfx/' + star + '_star.png')
+                            img().attr('src', 'grfx/' + me._starType[sys.starType])
                         ),
                         
                         sys.planets.map(function(planet) {
