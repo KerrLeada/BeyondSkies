@@ -1,10 +1,11 @@
-/**
+﻿/**
  * Setup the table, the body and the links
  */
 body
 {
     background-color: black;
     background-image: url('../grfx/background.jpg');
+    background-size: 100%;
     color: #4444FF;
     margin: 0;
     padding: 0;
@@ -150,23 +151,23 @@ td.paddedLeft
 .header
 {
     position: absolute;
-    top: 5;
-    height: 50px;
+    top: 5px;
+    height: 30px;
     width: 100%;
 }
 
 .content
 {
     position: absolute;
-    top: 60;
-    bottom: 70;
+    top: 40px;
+    bottom: 70px;
     width: 100%;
 }
 
 .footer
 {
     position: absolute;
-    bottom: 5;
+    bottom: 5px;
     height: 50px;
     width: 100%;
 }
@@ -180,7 +181,7 @@ td.paddedLeft
 .endturn
 {
     position: absolute;
-    right: 5;
+    right: 5px;
 }
 
 .txtbtn

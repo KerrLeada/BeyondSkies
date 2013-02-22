@@ -3,3 +3,9 @@ It is created with html 5, javascript and php. The goal of the project is to exp
 create this kind of game using those tools.
 
 Do note that this is a work in progress.
+
+Note about the latest:
+Have mainly implemented some optimizations, hoping to improve performance. Have also managed
+to get it to work in Internet Explorer 9 (have not tested an earlier version yet), which didnt
+work earlier due to a css issue. A bug, which made so the player could not enter a selected system
+through double clicking, has been fixed.

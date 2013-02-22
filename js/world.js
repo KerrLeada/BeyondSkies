@@ -1,4 +1,4 @@
-var world = new function() {
+﻿var world = new function() {
     var ns = this;
     
     // Contains common operations for things like finding ships

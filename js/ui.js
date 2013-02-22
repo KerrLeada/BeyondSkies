@@ -1,4 +1,4 @@
-// This is the ONLY external script file that does something to the UI
+﻿// This is the ONLY external script file that does something to the UI
 
 // The UI "namespace"
 var ui = new function() {
@@ -55,7 +55,14 @@ var ui = new function() {
             highlightColor: 'red',
             gridColor: '#111111',
             courseColor: '#222222',
-            starScale: 10
+            selectionRadius: 10,
+            starScale: 10,
+            
+            // Images (for correctness they are placed here)
+            fleetImg: null,
+            redStarImg: null,
+            blueStarImg: null,
+            yellowStarImg: null
         };
         
         this._highlighted = null;
@@ -72,6 +79,9 @@ var ui = new function() {
         var halfCellH = null;
         var fltScale = 10;
         var halfFltScale = fltScale / 2;
+        
+        // Buffer for the stars
+        this._starbuff = document.createElement('canvas');
         
         // Returns the selected system
         this.selected = function() {
@@ -108,12 +118,10 @@ var ui = new function() {
         };
         
         // Highlights a starsystem
-        // Returns true if something changed and false otherwise
-        this.highlight = function(canvas, x, y) {
+        this.highlight = function(player, canvas, x, y) {
             // Calculate the row and column
             var row = Math.floor(y / cellH);
             var col = Math.floor(x / cellW);
-            var updated = false;
             
             // Check if its a new or old row
             if (row !== me._hrow || col !== me._hcol) {
@@ -121,20 +129,17 @@ var ui = new function() {
                 me._hcol = col;
                 var sys = uni.sysAt(row, col);
                 
-                // If there was a system at the given location, if it was not the selected system and, assuming a range exists, the
-                // system is in range then set the system to be highlighted
-                if (sys !== undefined && sys !== me._selected && (me._range === null || me._selected.distanceTo(sys) <= me._range)) {
+                // If there was a system at the given location and, assuming a range exists, the
+                // system is in range then highlight the system
+                if (sys !== undefined && (me._range === null || me._selected.distanceTo(sys) <= me._range)) {
                     me._highlighted = sys;
-                    updated = true;
+                    me.display(player, canvas);
                 }
                 else if (me._highlighted !== null) {
                     me._highlighted = null;
-                    updated = true;
+                    me.display(player, canvas);
                 }
             }
-            
-            // Return if something was updated
-            return updated;
         };
         
         // Draws information about a system
@@ -143,14 +148,14 @@ var ui = new function() {
             
             // Display the name of the system
             var indicator = sys.hasShips(player) ? '*' : '';
-            ctx.fillText(sys.sysName + indicator, x + halfCellW, y + cellH + 15);
+            ctx.fillText(sys.sysName + indicator, x, y + halfCellH + 15);
             
             // Display more data
             var owners = player.civsIn(sys);
             if (owners.length > 0) {
                 var msg = '(' + owners.map(function(x) { return x.civName; }).join(', ') + ')';
                 ctx.font = '15px ' + me.style.font;
-                ctx.fillText(msg, x + halfCellW, y + cellH + 35);
+                ctx.fillText(msg, x, y + halfCellH + 35);
                 ctx.font = '20px ' + me.style.font;
             }
             
@@ -242,9 +247,24 @@ var ui = new function() {
             return img;
         }
         
+        // Calculates the x position of the middle of the tile at the given location
+        function calcX(pos) {
+            return pos.col * cellW + halfCellW;
+        }
+        
+        // Calculates the y position of the middle of the tile at the given location
+        function calcY(pos) {
+            return pos.row * cellH + halfCellH;
+        }
+        
         // Draws the canvas
         this.display = function(player, canvas) {
-            me._adjustCanvasSize(canvas);
+            var systems = uni.getSystems();
+            var selected = me._selected;
+        
+            if (me._adjustCanvasSize(canvas)) {
+                me._drawStars(canvas, systems);
+            }
             
             // Get the context and clear the canvas
             var ctx = canvas.getContext('2d');
@@ -254,39 +274,39 @@ var ui = new function() {
             if (me._showGrid) {
                 drawGrid(ctx);
             }
-            
-            // If there are fleets in deep space, draw them
             if (!uni.deepspace.fleets.isEmpty()) {
                 drawDeepSpace(ctx);
             }
-            
-            // Setup the systems, the half cell sizes and the radius for the stars
-            var systems = uni.getSystems();
-            var selected = me._selected;
             
             // Setup the text drawing and the star scale
             ctx.font = '20px ' + me.style.font;
             ctx.textAlign = 'center';
             var starScale = me.style.starScale;
             var halfStarScale = starScale / 2;
+            var outOfRange = [];
             
             // Draw the stars
-            for (var i = 0; i < systems.length; ++i) {
+            ctx.drawImage(me._starbuff, 0, 0);
+            for (var i = 0, len = systems.length; i < len; i++) {
                 var sys = systems[i];
-                var pos = sys.pos;
-                var x = pos.col * cellW + halfCellW;
-                var y = pos.row * cellH + halfCellH;
-                ctx.drawImage(getStarImg(sys.starType), x - halfStarScale, y - halfStarScale, starScale, starScale);
                 if (player.visited(sys)) {
-                    me._drawSystemInfo(player, ctx, sys, x, y);
+                    var pos = sys.pos;
+                    me._drawSystemInfo(player, ctx, sys, calcX(pos), calcY(pos));
                 }
-                
-                // Draw a transperant circle around the system, darkening it, if there is a range and the system
-                // is not in that range
+                // If there is a range and the current system is not in it, then add it to the list
+                // of out of range systems
                 if (me._range !== null && selected.distanceTo(sys) > me._range) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                    outOfRange.push(sys);
+                }
+            }
+            
+            // Draw a transperant circle around the out of range systems, darkening them, if there is a range
+            if (me._range !== null) {
+                ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                for (var i = 0, len = outOfRange.length; i < len; i++) {
+                    var pos = outOfRange[i].pos;
                     ctx.beginPath();
-                    ctx.arc(x, y, halfStarScale, 0, 2*Math.PI);
+                    ctx.arc(calcX(pos), calcY(pos), halfStarScale, 0, 2*Math.PI);
                     ctx.fill();
                 }
             }
@@ -295,14 +315,14 @@ var ui = new function() {
             var pos = me._selected.pos;
             ctx.strokeStyle = me.style.selectionColor;
             ctx.lineWidth = 3;
-            strokedCircle(ctx, pos.col * cellW + halfCellW, pos.row * cellH + halfCellH, 15);
+            strokedCircle(ctx, pos.col * cellW + halfCellW, pos.row * cellH + halfCellH, me.style.selectionRadius);
             
             // Draw the hover circle (if one should be drawn)
-            if (me._highlighted !== null) {
+            if (me._highlighted !== null && me._highlighted !== me._selected) {
                 ctx.strokeStyle = me.style.highlightColor;
                 ctx.lineWidth = 1;
                 pos = me._highlighted.pos;
-                strokedCircle(ctx, pos.col * cellW + halfCellW, pos.row * cellH + halfCellH, 15);
+                strokedCircle(ctx, pos.col * cellW + halfCellW, pos.row * cellH + halfCellH, me.style.selectionRadius);
             }
         };
         
@@ -312,17 +332,36 @@ var ui = new function() {
             var rect = canvas.getBoundingClientRect();
             var width = Math.floor(rect.right - rect.left);
             var height = Math.floor(rect.bottom - rect.top);
+            var update = false;
             if (width !== me._canvasWidth) {
                 canvas.width = width;
                 me._canvasWidth = width;
                 cellW = Math.floor(width / uni.width);
                 halfCellW = cellW / 2;
+                update = true;
             }
             if (height !== me._canvasHeight) {
                 canvas.height = height;
                 me._canvasHeight = height;
                 cellH = Math.floor(height / uni.height);
                 halfCellH = cellH / 2;
+                update = true;
+            }
+            return update;
+        };
+        
+        // Updates the internal star buffer
+        this._drawStars = function(canvas, systems) {
+            me._starbuff.width = canvas.width;
+            me._starbuff.height = canvas.height;
+            var ctx = me._starbuff.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            var starScale = me.style.starScale;
+            var halfStarScale = starScale / 2;
+            for (var i = 0, len = systems.length; i < len; i++) {
+                var sys = systems[i];
+                var pos = sys.pos;
+                ctx.drawImage(getStarImg(sys.starType), calcX(pos) - halfStarScale, calcY(pos) - halfStarScale, starScale, starScale);
             }
         };
     };
