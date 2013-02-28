@@ -27,7 +27,7 @@
         this.sys = sys;
         this.owner = owner;
         this.ships = new core.Hashtable(ships);
-        this._dest = null;
+        this.onArrival = function() {};
         
         // Used to update the fleet range and speed
         // Note that this doesnt update the movement points of the
@@ -65,23 +65,13 @@
             updateRangeSpeed();
         };
         
-        // Marks the system as the destination and returns true if it is in range, false otherwise
-        this.mark = function(sys) {
+        // Sends the fleet to the marked destination (returns true if there was a destination, false otherwise)
+        this.sendTo = function(sys) {
             var shortest = me.ships.findBest(ShipUtils.shortestRange);
             if (me.sys.distanceTo(sys) <= shortest.range) {
-                me._dest = sys;
-                return true;
-            }
-            return false;
-        };
-        
-        // Sends the fleet to the marked destination (returns true if there was a destination, false otherwise)
-        this.send = function() {
-            if (me._dest !== null) {
                 var ships = me.ships.values();
                 me.sys.leave(ships);
-                ds.enter(me, me._dest);
-                me._dest = null;
+                ds.enter(me, sys);
                 return true;
             }
             return false;
@@ -162,6 +152,7 @@
     };
     
     // Represents a planet
+    var planetUid;
     this.Planet = function(sys, type) {
         var me = this;
         this.type = type;
@@ -169,23 +160,11 @@
         this.owner = null;
         
         // Colonize the planet with the given ship
-        this.colonize = function(player) {
-            /*
-            me.owner = ship.owner;
-            sys.ships.remove(ship.uid);
-            me.owner.systems.set(sys.sysName, sys);
-            sys._colonized(me.owner, me);
-            */
-            var ship = sys.ships.find(function(_, s) {
-                return s.owner === player && s.type === ns.DefaultSpecs.ColonyShip.type;
-            });
-            if (ship) {
-                me.owner = player;
-                sys.ships.remove(ship.uid);
-                me.owner.systems.set(sys.sysName, sys);
-                sys._colonized(me.owner, me);
-            }
-        };
+        /*this._colonize = function(player) {
+        };*/
+        
+        //
+        this.uid = 'pl' + ++planetUid;
     };
 
     // Represents a position
@@ -194,9 +173,9 @@
     };
     
     this.StarType = {
-        RED: "Red",
-        YELLOW: "Yellow",
-        BLUE: "Blue"
+        RED: 'Red',
+        YELLOW: 'Yellow',
+        BLUE: 'Blue'
     };
     
     this.getStarTypes = function() {
@@ -212,11 +191,27 @@
         this.sysName = name;
         this.starType = starType;
         this._civs = new core.Hashtable();
+        this.onColonized = function() {};
         
-        // Internal method called when a planet is colonized
-        this._colonized = function(civ, planet) {
-            if (!me._civs.has(civ.civName)) {
-                me._civs.set(civ.civName, civ);
+        // Colonizes a planet for a civilization
+        this.colonize = function(civ, planet) {
+            // Find a colony ship
+            var ship = me.ships.find(function(_, s) {
+                return s.owner === civ && s.type === ns.DefaultSpecs.ColonyShip.type;
+            });
+            
+            // If there was a colony ship, colonize a planet and remove the colony ship
+            if (ship) {
+                planet.owner = civ;
+                me.ships.remove(ship.uid);
+                civ.systems.set(name, me);
+                
+                // Make sure the system remembers the colonizing civilization, and then call
+                // the onColonized callback
+                if (!me._civs.has(civ.civName)) {
+                    me._civs.set(civ.civName, civ);
+                }
+                me.onColonized(civ, planet);
             }
         };
         
@@ -270,6 +265,7 @@
             dest.enter(fleet.ships.values());
             fleet.owner.visit(dest);
             me.leave(fleet);
+            fleet.onArrival(dest);
         }
         
         // Enters a ship to deep space
@@ -387,7 +383,7 @@
 
         // The homeworld is the planet closest to the star 
         home.planets[0].owner = this;
-        home._colonized(this, home.planets[0]);
+        home._civs.set(name, this);
         
         // Visit a system
         this.visit = function(sys) {

@@ -3,4 +3,14 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Have mainly implemented some optimizations, hoping to improve performance. Have also managed to get it to work in Internet Explorer 9 (have not tested an earlier version yet), which didnt work earlier due to a css issue. A bug, which made so the player could not enter a selected system through double clicking, has been fixed.
+The main focus this time around has been cleaning up in the code. Specifically, the ui "namespace" previously defined in a single file, "ui.js", has been split into four seperate files instead. All of these new files has been put in the "js/ui" folder. The files are:
+
+"stage.js", which contains the new "Stage" type, which is responsible for handling the ship bar, the starmap and the system view.
+
+"shipbar.js" contains the new "ShipBar" type which handles the ship bar.
+
+"starmap.js" contains the original "Starmap" type. However, this type has now been split into two. The reason for this was because it was growing in size and started to become hard to keep organized, especially considering that the drawing and non-drawing parts of the type where slammed together. Now it consists of the old "Starmap" type, which contains the non-drawing parts, and "_StarmapView", which contains the drawing parts of the code. A "Starmap" instance will have a variable called "_view" which is an instance of "_StarmapView".
+
+"systemview.js" contains the old "SystemView" type, which has not changed that much.
+
+There has been tweaks a bit everwhere in the code as well. For example, "index.php" has a lot less javascript content, due to the introduction of the "Stage" type.
