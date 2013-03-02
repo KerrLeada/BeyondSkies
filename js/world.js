@@ -123,6 +123,7 @@
         };
     };
     
+    // The default specs for every civilization
     this.DefaultSpecs = {
         ColonyShip : new ns.ShipSpec('Colony Ship', 1, 20, 1, 0),
         Scout : new ns.ShipSpec('Scout', 1, 5000, 2, 0)
@@ -153,18 +154,41 @@
     
     // Represents a planet
     var planetUid;
-    this.Planet = function(sys, type) {
+    this.Planet = function(order, sys, type, clazz) {
         var me = this;
         this.type = type;
+        this.order = order;
         this.sys = sys;
-        this.owner = null;
-        
-        // Colonize the planet with the given ship
-        /*this._colonize = function(player) {
-        };*/
+        this.clazz = clazz;
+        this.colony = new ns.Colony(clazz);
         
         //
         this.uid = 'pl' + ++planetUid;
+    };
+    
+    // Represents a colony on a planet
+    this.Colony = function(planetClazz) {
+        var me = this;
+        this.owner = null;
+        this.income = 0;
+        this.population = 0;
+        this.maxPopulation = Math.round(planetClazz * 1.5);
+        
+        this.prepare = function(civ) {
+            me.owner = civ;
+            me.population = 1;
+        };
+        
+        this.exists = function() {
+            return me.owner !== null;
+        };
+        
+        this.update = function() {
+            if (me.owner && me.population < me.maxPopulation) {
+                me.population = Math.min(me.population + me.owner.growth, me.maxPopulation);
+                me.income += me.population * 1.20;
+            }
+        };
     };
 
     // Represents a position
@@ -190,8 +214,15 @@
         this.planets = [];
         this.sysName = name;
         this.starType = starType;
-        this._civs = new core.Hashtable();
         this.onColonized = function() {};
+        this._civs = new core.Hashtable();
+        this._income = new core.Hashtable();
+        this._colonized = [];
+        
+        // Gets the income for the given civilization in the current system
+        this.income = function(civ) {
+            return me._income.get(civ.name);
+        };
         
         // Colonizes a planet for a civilization
         this.colonize = function(civ, planet) {
@@ -202,16 +233,22 @@
             
             // If there was a colony ship, colonize a planet and remove the colony ship
             if (ship) {
-                planet.owner = civ;
+                planet.colony.prepare(civ);
                 me.ships.remove(ship.uid);
                 civ.systems.set(name, me);
                 
                 // Make sure the system remembers the colonizing civilization, and then call
                 // the onColonized callback
-                if (!me._civs.has(civ.civName)) {
-                    me._civs.set(civ.civName, civ);
+                if (!me._civs.has(civ.name)) {
+                    me._civs.set(civ.name, civ);
                 }
                 me.onColonized(civ, planet);
+                me._colonized.push(planet);
+                
+                //
+                if (!me._income.has(civ.name)) {
+                    me._income.set(civ.name, 0);
+                }
             }
         };
         
@@ -252,6 +289,28 @@
             var rows = Math.abs(me.pos.row - otherSys.pos.row);
             var cols = Math.abs(me.pos.col - otherSys.pos.col);
             return core.pythagoras(rows, cols);
+        };
+        
+        this.update = function() {
+            if (!me._civs.isEmpty()) {
+                var income = me._income;
+                for (var i = 0, len = me._colonized.length; i < len; i++) {
+                    var colony = me._colonized[i].colony;
+                    var oldInc = colony.income;
+                    colony.update();
+                    income.set(colony.owner.name, income.get(colony.owner.name) + (colony.income - oldInc));
+                }
+            }
+        };
+        
+        //
+        this._home = function(civ) {
+            var homeworld = me.planets[0].colony;
+            homeworld.prepare(civ);
+            homeworld.update();
+            me._colonized.push(me.planets[0]);
+            me._civs.set(civ.name, civ);
+            me._income.set(civ.name, homeworld.income);
         };
     };
     
@@ -308,6 +367,65 @@
             });
         };
     };
+    
+    // Represents a civilization
+    this.Civ = function(name, type, home) {
+        var me = this;
+        this.name = name; // Testing what happens if its "name" rather then "civName"
+        this.type = type;
+        this.home = home;
+        this.ships = new core.Hashtable();
+        this.growth = 0.15;
+        
+        // Stores the systems the civilization has a presence in
+        this.systems = new core.Hashtable();
+        this.systems.set(home.sysName, home);
+        
+        // Stores the visited systems
+        // Each visited system will have its name as a key
+        // It also stores the civs who was present at the time of the visit
+        this._visitedSystems = new core.Hashtable();
+        this._visitedSystems.set(home.sysName, [this]);
+
+        // The homeworld is the planet closest to the star
+        home._home(this);
+        
+        this.money = 5000;
+        this.income = home.income(this);
+        
+        // Visit a system
+        this.visit = function(sys) {
+            me._visitedSystems.set(sys.sysName, sys.civs());
+        };
+        
+        // Check if a system has been visited
+        this.visited = function(sys) {
+            return me.systems.has(sys.sysName) || me._visitedSystems.has(sys.sysName);
+        };
+        
+        // Returns the civilizations the current civilization knows exist in the given system
+        this.civsIn = function(sys) {
+            return me.systems.has(sys.sysName) ?
+                   sys.civs():
+                   me._visitedSystems.get(sys.sysName);
+        };
+        
+        // Returns the ships the current civilization knows exist in the system
+        this.shipsIn = function(sys) {
+            return me.visited(sys) ?
+                   sys.ships.values():
+                   [];
+        };
+        
+        this.update = function() {
+            me.money += me.income;
+            var newInc = 0;
+            me.systems.foreach(function(_, sys) {
+                newInc += sys.income(me);
+            });
+            me.income = newInc;
+        };
+    };
 
     // Represents the universe
     this.Universe = function(width, height, systems) {
@@ -359,54 +477,12 @@
         
         this.update = function() {
             me.deepspace.update();
-        };
-    };
-
-    // Represents a civilization
-    this.Civ = function(name, type, home) {
-        var me = this;
-        this.civName = name;
-        this.type = type;
-        this.home = home;
-        this.money = 5000;
-        this.ships = new core.Hashtable();
-        
-        // Stores the systems the civilization has a presence in
-        this.systems = new core.Hashtable();
-        this.systems.set(home.sysName, home);
-        
-        // Stores the visited systems
-        // Each visited system will have its name as a key
-        // It also stores the civs who was present at the time of the visit
-        this._visitedSystems = new core.Hashtable();
-        this._visitedSystems.set(home.sysName, [this]);
-
-        // The homeworld is the planet closest to the star 
-        home.planets[0].owner = this;
-        home._civs.set(name, this);
-        
-        // Visit a system
-        this.visit = function(sys) {
-            me._visitedSystems.set(sys.sysName, sys.civs());
-        };
-        
-        // Check if a system has been visited
-        this.visited = function(sys) {
-            return me.systems.has(sys.sysName) || me._visitedSystems.has(sys.sysName);
-        };
-        
-        // Returns the civilizations the current civilization knows exist in the given system
-        this.civsIn = function(sys) {
-            return me.systems.has(sys.sysName) ?
-                   sys.civs():
-                   me._visitedSystems.get(sys.sysName);
-        };
-        
-        // Returns the ships the current civilization knows exist in the system
-        this.shipsIn = function(sys) {
-            return me.visited(sys) ?
-                   sys.ships.values():
-                   [];
+            me._sysnames.foreach(function(_, sys) {
+                sys.update();
+            });
+            me.civs.foreach(function(_, civ) {
+                civ.update();
+            });
         };
     };
 };

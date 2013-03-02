@@ -3,14 +3,12 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-The main focus this time around has been cleaning up in the code. Specifically, the ui "namespace" previously defined in a single file, "ui.js", has been split into four seperate files instead. All of these new files has been put in the "js/ui" folder. The files are:
+I have added basic support for an economy. Each planet now contribute to the system income, which contributes to the civilization income. The civilization income is added to the civilizations money at each turn. How much income a planet produces is based on how high its population is.
 
-"stage.js", which contains the new "Stage" type, which is responsible for handling the ship bar, the starmap and the system view.
+A planet and a colony has been seperated into two different types. The old planet type just keeps track of the planet specific properties (like what type it is). "Planet" also has three new properties. "clazz", which state what class the planet is of. "order", which state where in the system the planet is (starts at 1). "colony", which contains an instance of the "Colony" type.
 
-"shipbar.js" contains the new "ShipBar" type which handles the ship bar.
+The "Colony" type  bascially contains colony specific data and methods, like who owns the planet, what the current population is and what the maximum population is. It is this type that keeps track of a planets economy as well.
 
-"starmap.js" contains the original "Starmap" type. However, this type has now been split into two. The reason for this was because it was growing in size and started to become hard to keep organized, especially considering that the drawing and non-drawing parts of the type where slammed together. Now it consists of the old "Starmap" type, which contains the non-drawing parts, and "_StarmapView", which contains the drawing parts of the code. A "Starmap" instance will have a variable called "_view" which is an instance of "_StarmapView".
+A planets population is increased with a civilization specific growth property. At the moment all civilizations has the same growth, but that may change in the future.
 
-"systemview.js" contains the old "SystemView" type, which has not changed that much.
-
-There has been tweaks a bit everwhere in the code as well. For example, "index.php" has a lot less javascript content, due to the introduction of the "Stage" type.
+A minor tweak has been made so that no systems will be places at the outmost columns at the left and right side, as well as the bottom row. This is mainly to prevent the names from going outside of the canvas, and might be a temporary measure if a better way is found.

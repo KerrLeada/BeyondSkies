@@ -28,6 +28,10 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         return $('<div>');
     }
     
+    function smallDiv() {
+        return div().addClass('dispSmall');
+    }
+    
     // Creates a paragraph
     function p() {
         return $('<p>');
@@ -91,7 +95,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     // Displays the planets (or not)
     function displayPlanets(sys) {
         var count = 0;
-        var hasColship = sys.ships.exists(function(_, ship) {
+        var hasColShip = sys.ships.exists(function(_, ship) {
             return ship.owner === player && colonyShip(ship);
         });
         return (!player.visited(sys)) ? td().append('System has not been visited') : sys.planets.map(function(planet) {
@@ -100,15 +104,26 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
                         div().addClass('centeredText').append(
                         img().attr('src', 'grfx/' + me._mapping[planet.type]),
                         p().append(
-                            sys.sysName + ' ' + count,
-                            [
+                            sys.sysName + ' ' + planet.order,
+                            planetInfo(player, parent, planet, hasColShip)
+                            /*[
                                 div().addClass('dispSmall').html(worldInfo(planet.type)),
-                                colonyInfo(player, parent, planet, hasColship)
-                            ]
+                                div().addClass('dispSmall').html('Class ' + planet.clazz),
+                                colonyInfo(player, parent, planet, hasColship),
+                                populationInfo(planet.colony)
+                            ]*/
                         )
                     )
             )
         });
+    }
+    
+    function planetInfo(player, parent, planet, hasColShip) {
+        var result = colonyInfo(player, parent, planet, hasColShip);
+        var clazz = smallDiv().html('Class ' + planet.clazz);
+        var winfo = smallDiv().html(worldInfo(planet.type));
+        result.splice(0, 0, winfo, clazz);
+        return result;
     }
     
     // What to show about a planet type
@@ -123,9 +138,11 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     
     // Creates the colony information div
     function colonyInfo(player, parent, planet, hasColShip) {
-        var result = div().addClass('dispSmall');
-        if (planet.owner != null) {
-            result.html(planet.owner === player ? 'Colonized' : 'Colonized by ' + planet.owner.civName);
+        var colony = planet.colony;
+        var colInfo = smallDiv();
+        var popInfo = smallDiv().append(populationInfo(player, colony));
+        if (colony.exists()) {
+            colInfo.html(colony.owner === player ? 'Colonized' : 'Colonized by ' + colony.owner.name);
         }
         else if (hasColShip) {
             var btn = button().attr('type', 'button').html('Colonize');
@@ -137,19 +154,31 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
                 // Check if there are more colony ships
                 if (planet.sys.hasShips(player, colonyShip)) {
                     // If there are, just replace the button with the text 'Colonized'
-                    result.empty().html('Colonized');
+                    colInfo.empty().html('Colonized');
                 }
                 else {
                     // If there are not any more colony ships, redisplay the system
                     me.display(player, parent);
                 }
+                popInfo.empty().append(populationInfo(player, colony));
             });
-            result.append(btn);
+            colInfo.append(btn);
         }
         else {
-            result.html('---');
+            colInfo.html('---');
         }
-        return result;
+        return [colInfo, popInfo];
+    }
+    
+    function populationInfo(player, colony) {
+        if (colony.exists()) {
+            var info = colony.owner === player ?
+                       Math.floor(colony.population * 10) / 10 + ' / ' + colony.maxPopulation :
+                       '???'
+            return 'Population: ' + info;
+                   
+        }
+        return '---'
     }
     
     // Checks if a ship is a colony ship

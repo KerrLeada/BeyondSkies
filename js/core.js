@@ -126,8 +126,10 @@ var core = new function() {
     
     // Adds or sets a new value with the given key
     MyHashtable.prototype.set = function(key, value) {
+        if (!this._elems[key]) {
+            this.size += 1;
+        }
         this._elems[key] = value;
-        this.size += 1;
     };
     
     // Gets the value with the given key

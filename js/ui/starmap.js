@@ -343,7 +343,7 @@ ui._StarmapView = function(player, uni, canvas, style) {
         ctx.font = '15px ' + me.style.font;
         for (var i = 0, len = civs.length; i < len; i++) {
             var civ = civs[i];
-            var msg = '(' + civ.owners.map(function(x) { return x.civName; }).join(', ') + ')';
+            var msg = '(' + civ.owners.map(function(x) { return x.name; }).join(', ') + ')';
             ctx.fillText(msg, civ.x, civ.y + halfCellH + 35);
         }
     }
