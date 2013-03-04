@@ -43,10 +43,17 @@ ui.ShipBar = function(player, parent) {
             var btn = $('<button>').addClass('ship');
             btn.attr('id', s.uid);
             btn.attr('type', 'button');
-            btn.click(function() {
-                toggleSelection(btn, s);
-            });
-            btn.append((player === s.owner ? '* ' : '') + s.type);
+            
+            // Make so the button is only clickable if the ship belongs to the player
+            if (s.civ === player) {
+                btn.click(function() {
+                    toggleSelection(btn, s);
+                });
+                btn.append('* ' + s.type);
+            }
+            else {
+                btn.append(s.type);
+            }
             return btn;
         });
         

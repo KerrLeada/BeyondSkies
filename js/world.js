@@ -22,10 +22,10 @@
     // The last argument, ships, is an optional hashtable for
     // the ships that the fleet contains
     var fleetUid = 0;
-    this.Fleet = function(ds, owner, sys, ships) {
+    this.Fleet = function(ds, civ, sys, ships) {
         var me = this;
         this.sys = sys;
-        this.owner = owner;
+        this.civ = civ;
         this.ships = new core.Hashtable(ships);
         this.onArrival = function() {};
         
@@ -85,12 +85,12 @@
     
     // Represents a ship
     var shipUid = 0;
-    this.Ship = function(spec, owner) {
+    this.Ship = function(spec, civ) {
         this.type = spec.type;
         this.health = spec.maxHealth;
         this.maxHealth = spec.maxHealth;
         this.damage = spec.damage;
-        this.owner = owner;
+        this.civ = civ;
         this.system = null;
         
         // Set the range, speed and mp, where range is how far it can travel
@@ -118,8 +118,8 @@
         
         // Creates a new ship from the ship spec
         // Accepts the ship name and the owner of the ship
-        this.create = function(owner) {
-            return new ns.Ship(me, owner)
+        this.create = function(civ) {
+            return new ns.Ship(me, civ)
         };
     };
     
@@ -153,42 +153,15 @@
     };
     
     // Represents a planet
-    var planetUid;
+    var planetUid = 0;
     this.Planet = function(order, sys, type, clazz) {
         var me = this;
         this.type = type;
         this.order = order;
         this.sys = sys;
         this.clazz = clazz;
-        this.colony = new ns.Colony(clazz);
-        
-        //
+        this.colony = null;
         this.uid = 'pl' + ++planetUid;
-    };
-    
-    // Represents a colony on a planet
-    this.Colony = function(planetClazz) {
-        var me = this;
-        this.owner = null;
-        this.income = 0;
-        this.population = 0;
-        this.maxPopulation = Math.round(planetClazz * 1.5);
-        
-        this.prepare = function(civ) {
-            me.owner = civ;
-            me.population = 1;
-        };
-        
-        this.exists = function() {
-            return me.owner !== null;
-        };
-        
-        this.update = function() {
-            if (me.owner && me.population < me.maxPopulation) {
-                me.population = Math.min(me.population + me.owner.growth, me.maxPopulation);
-                me.income += me.population * 1.20;
-            }
-        };
     };
 
     // Represents a position
@@ -196,12 +169,14 @@
         return {row : row, col : col};
     };
     
+    // Represents a star type
     this.StarType = {
         RED: 'Red',
         YELLOW: 'Yellow',
         BLUE: 'Blue'
     };
     
+    // Gets the star types
     this.getStarTypes = function() {
         return core.listOwn(ns.StarType);
     };
@@ -212,49 +187,13 @@
         this.pos = pos;
         this.ships = new core.Hashtable();
         this.planets = [];
-        this.sysName = name;
+        this.name = name;
         this.starType = starType;
         this.onColonized = function() {};
-        this._civs = new core.Hashtable();
-        this._income = new core.Hashtable();
-        this._colonized = [];
-        
-        // Gets the income for the given civilization in the current system
-        this.income = function(civ) {
-            return me._income.get(civ.name);
-        };
-        
-        // Colonizes a planet for a civilization
-        this.colonize = function(civ, planet) {
-            // Find a colony ship
-            var ship = me.ships.find(function(_, s) {
-                return s.owner === civ && s.type === ns.DefaultSpecs.ColonyShip.type;
-            });
-            
-            // If there was a colony ship, colonize a planet and remove the colony ship
-            if (ship) {
-                planet.colony.prepare(civ);
-                me.ships.remove(ship.uid);
-                civ.systems.set(name, me);
-                
-                // Make sure the system remembers the colonizing civilization, and then call
-                // the onColonized callback
-                if (!me._civs.has(civ.name)) {
-                    me._civs.set(civ.name, civ);
-                }
-                me.onColonized(civ, planet);
-                me._colonized.push(planet);
-                
-                //
-                if (!me._income.has(civ.name)) {
-                    me._income.set(civ.name, 0);
-                }
-            }
-        };
         
         // Ships enters a system
         this.enter = function(ships) {
-            for (var i = 0; i < ships.length; ++i) {
+            for (var i = 0, len = ships.length; i < len; i++) {
                 me.ships.set(ships[i].uid, ships[i]);
                 ships[i].system = me;
             }
@@ -262,7 +201,7 @@
         
         // Ships leaves the system
         this.leave = function(ships) {
-            for (var i = 0; i < ships.length; ++i) {
+            for (var i = 0, len = ships.length; i < len; i++) {
                 me.ships.remove(ships[i].uid);
                 ships[i].system = null;
             }
@@ -270,14 +209,19 @@
 
         // Returns the civilizations that has colonies in this system
         this.civs = function() {
-            return me._civs.values();
+            return me.planets.reduce(function(civs, planet) {
+                if (planet.colony && $.inArray(planet.colony.civ, civs) === -1) {
+                    civs.push(planet.colony.civ);
+                }
+                return civs;
+            }, []);
         };
         
         // Checks if the given civilization has ships in the system
         this.hasShips = function(civ, pred) {
             var ships = me.ships.values();
-            for (var i = 0; i < ships.length; ++i) {
-                if (ships[i].owner === civ && (pred === undefined || pred(ships[i]))) {
+            for (var i = 0, len = ships.length; i < len; i++) {
+                if (ships[i].civ === civ && (pred === undefined || pred(ships[i]))) {
                     return true;
                 }
             }
@@ -290,27 +234,87 @@
             var cols = Math.abs(me.pos.col - otherSys.pos.col);
             return core.pythagoras(rows, cols);
         };
+    };
+    
+    // Represents a colony on a planet
+    var colUid = 0;
+    this.Colony = function(civ, planet) {
+        var me = this;
+        this.civ = civ;
+        this.sys = planet.sys;
+        this.planet = planet;
+        this.population = 1;
+        this.maxPopulation = Math.round(planet.clazz * 1.5);
+        this.uid = 'col' + ++colUid;
+        planet.colony = this;
         
+        // Updates the colony
         this.update = function() {
-            if (!me._civs.isEmpty()) {
-                var income = me._income;
-                for (var i = 0, len = me._colonized.length; i < len; i++) {
-                    var colony = me._colonized[i].colony;
-                    var oldInc = colony.income;
-                    colony.update();
-                    income.set(colony.owner.name, income.get(colony.owner.name) + (colony.income - oldInc));
+            if (me.civ && me.population < me.maxPopulation) {
+                me.population = Math.min(me.population + me.civ.growth, me.maxPopulation);
+            }
+        };
+    };
+    
+    // Handles the colonies of a civilization
+    this.ColonyManager = function(civ) {
+        var me = this;
+        this.civ = civ;
+        this.income = 0;
+        this.systems = new core.Hashtable();
+        this._colonies = new core.Hashtable();
+        this._colonies.set(civ.home.name, {
+            colonies: [new ns.Colony(civ, civ.home.planets[0])],
+            income: 0,
+            production: 0
+        });
+        
+        // Colonizes a planet
+        this.colonize = function(planet) {
+            // Make sure there is a colony ship
+            var sys = planet.sys;
+            var colship = sys.ships.find(function(_, s) {
+                return s.civ === civ && s.type === ns.DefaultSpecs.ColonyShip.type;
+            });
+            if (colship) {
+                // Remove the colony ship and colonize the planet
+                sys.ships.remove(colship.uid);
+                if (me._colonies.has(sys.name)) {
+                    sys = me._colonies.get(sys.name);
+                    sys.colonies.push(new ns.Colony(civ, planet));
                 }
+                else {
+                    me.systems.set(sys.name, sys);
+                    var col = new ns.Colony(civ, planet);
+                    me._colonies.set(sys.name, {
+                        colonies: [col],
+                        income: 0,
+                        production: 0
+                    });
+                }
+            }
+            else {
+                // So failure wont be silent :P
+                throw 'Colonization of ' + planet.sys.name + ' ' + planet.order + ' failed due to lack of a colony ship';
             }
         };
         
-        //
-        this._home = function(civ) {
-            var homeworld = me.planets[0].colony;
-            homeworld.prepare(civ);
-            homeworld.update();
-            me._colonized.push(me.planets[0]);
-            me._civs.set(civ.name, civ);
-            me._income.set(civ.name, homeworld.income);
+        // Go through all the systems and colonies, update them and calculate the income and all that crap
+        this.update = function() {
+            me.income = 0;
+            me._colonies.foreach(function(_, sys) {
+                var colonies = sys.colonies;
+                var income = 0;
+                var production = 0;
+                for (var i = 0, len = colonies.length; i < len; i++) {
+                    colonies[i].update();
+                    income += colonies[i].population * 1.2;
+                    production += colonies[i].population * 0.75;
+                }
+                sys.income = income;
+                sys.production = production;
+                me.income += income;
+            });
         };
     };
     
@@ -322,7 +326,7 @@
         // The fleet arrives at its destination
         function arrive(fleet, dest) {
             dest.enter(fleet.ships.values());
-            fleet.owner.visit(dest);
+            fleet.civ.visit(dest);
             me.leave(fleet);
             fleet.onArrival(dest);
         }
@@ -371,43 +375,49 @@
     // Represents a civilization
     this.Civ = function(name, type, home) {
         var me = this;
-        this.name = name; // Testing what happens if its "name" rather then "civName"
+        this.name = name;
         this.type = type;
         this.home = home;
         this.ships = new core.Hashtable();
         this.growth = 0.15;
         
         // Stores the systems the civilization has a presence in
-        this.systems = new core.Hashtable();
-        this.systems.set(home.sysName, home);
+        //this._systems = new core.Hashtable();
+        //this._systems.set(home.name, home);
+        this._colonyMan = new ns.ColonyManager(this);
+        this._colonyMan.update();
+        this._systems = this._colonyMan.systems;
         
         // Stores the visited systems
         // Each visited system will have its name as a key
         // It also stores the civs who was present at the time of the visit
         this._visitedSystems = new core.Hashtable();
-        this._visitedSystems.set(home.sysName, [this]);
+        this._visitedSystems.set(home.name, [this]);
 
-        // The homeworld is the planet closest to the star
-        home._home(this);
-        
         this.money = 5000;
-        this.income = home.income(this);
+        this.income = this._colonyMan.income;
+        
+        this.colonize = this._colonyMan.colonize;
+        
+        this.systems = function() {
+            return me._systems.values();
+        };
         
         // Visit a system
         this.visit = function(sys) {
-            me._visitedSystems.set(sys.sysName, sys.civs());
+            me._visitedSystems.set(sys.name, sys.civs());
         };
         
         // Check if a system has been visited
         this.visited = function(sys) {
-            return me.systems.has(sys.sysName) || me._visitedSystems.has(sys.sysName);
+            return me._systems.has(sys.name) || me._visitedSystems.has(sys.name);
         };
         
         // Returns the civilizations the current civilization knows exist in the given system
         this.civsIn = function(sys) {
-            return me.systems.has(sys.sysName) ?
+            return me._systems.has(sys.name) ?
                    sys.civs():
-                   me._visitedSystems.get(sys.sysName);
+                   me._visitedSystems.get(sys.name);
         };
         
         // Returns the ships the current civilization knows exist in the system
@@ -419,11 +429,8 @@
         
         this.update = function() {
             me.money += me.income;
-            var newInc = 0;
-            me.systems.foreach(function(_, sys) {
-                newInc += sys.income(me);
-            });
-            me.income = newInc;
+            me._colonyMan.update();
+            me.income = me._colonyMan.income;
         };
     };
 
@@ -444,7 +451,7 @@
 
         // Helps adding a system to the universe
         function addSystem(system) {
-            me._sysnames.set(system.sysName, system);
+            me._sysnames.set(system.name, system);
             me._syscoords.set(sysCoordId(system.pos.row, system.pos.col), system);
         };
         
@@ -477,9 +484,11 @@
         
         this.update = function() {
             me.deepspace.update();
+            /*
             me._sysnames.foreach(function(_, sys) {
                 sys.update();
             });
+            */
             me.civs.foreach(function(_, civ) {
                 civ.update();
             });

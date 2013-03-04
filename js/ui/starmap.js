@@ -197,7 +197,7 @@ ui._StarmapView = function(player, uni, canvas, style) {
     this._drawSystemInfo = function(player, ctx, sys, x, y, civs) {
         // Display the name of the system
         var indicator = sys.hasShips(player) ? '*' : '';
-        ctx.fillText(sys.sysName + indicator, x, y + halfCellH + 15);
+        ctx.fillText(sys.name + indicator, x, y + halfCellH + 15);
         
         // Display more data
         var owners = player.civsIn(sys);

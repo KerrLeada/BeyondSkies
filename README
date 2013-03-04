@@ -3,12 +3,8 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-I have added basic support for an economy. Each planet now contribute to the system income, which contributes to the civilization income. The civilization income is added to the civilizations money at each turn. How much income a planet produces is based on how high its population is.
+Have remade the way colonization works. Basically now every civilization has a "ColonyManager" which keeps track of all the colonies as well as how much income and production they create. A "Planet" object still has a "colony" property, but that property is now null when no one has a colony on it. Colonization is now done through the "colonize" method of a "Civ" object and the "colonize" method of a "StarSystem" object has been removed.
 
-A planet and a colony has been seperated into two different types. The old planet type just keeps track of the planet specific properties (like what type it is). "Planet" also has three new properties. "clazz", which state what class the planet is of. "order", which state where in the system the planet is (starts at 1). "colony", which contains an instance of the "Colony" type.
+Smaller changes include renaming all "owner" properties to "civ". Have also made the income lower so that buttons wont be pushed around as much (at this stage it doesnt matter, will fix that later).
 
-The "Colony" type  bascially contains colony specific data and methods, like who owns the planet, what the current population is and what the maximum population is. It is this type that keeps track of a planets economy as well.
-
-A planets population is increased with a civilization specific growth property. At the moment all civilizations has the same growth, but that may change in the future.
-
-A minor tweak has been made so that no systems will be places at the outmost columns at the left and right side, as well as the bottom row. This is mainly to prevent the names from going outside of the canvas, and might be a temporary measure if a better way is found.
+Money and production cannot be used yet.

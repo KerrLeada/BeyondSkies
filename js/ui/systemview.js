@@ -79,7 +79,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         parent.empty().append(
             table().addClass('sysview').append(
                 tr().append(
-                    td().html((!player.visited(sys)) ? 'Unknown system' : sys.sysName + ' system')
+                    td().html((!player.visited(sys)) ? 'Unknown system' : sys.name + ' system')
                 ),
                 
                 tr().append(
@@ -96,7 +96,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     function displayPlanets(sys) {
         var count = 0;
         var hasColShip = sys.ships.exists(function(_, ship) {
-            return ship.owner === player && colonyShip(ship);
+            return ship.civ === player && colonyShip(ship);
         });
         return (!player.visited(sys)) ? td().append('System has not been visited') : sys.planets.map(function(planet) {
             ++count;
@@ -104,14 +104,8 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
                         div().addClass('centeredText').append(
                         img().attr('src', 'grfx/' + me._mapping[planet.type]),
                         p().append(
-                            sys.sysName + ' ' + planet.order,
+                            sys.name + ' ' + planet.order,
                             planetInfo(player, parent, planet, hasColShip)
-                            /*[
-                                div().addClass('dispSmall').html(worldInfo(planet.type)),
-                                div().addClass('dispSmall').html('Class ' + planet.clazz),
-                                colonyInfo(player, parent, planet, hasColship),
-                                populationInfo(planet.colony)
-                            ]*/
                         )
                     )
             )
@@ -141,14 +135,14 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         var colony = planet.colony;
         var colInfo = smallDiv();
         var popInfo = smallDiv().append(populationInfo(player, colony));
-        if (colony.exists()) {
-            colInfo.html(colony.owner === player ? 'Colonized' : 'Colonized by ' + colony.owner.name);
+        if (colony) {
+            colInfo.html(colony.civ === player ? 'Colonized' : 'Colonized by ' + colony.civ.name);
         }
         else if (hasColShip) {
             var btn = button().attr('type', 'button').html('Colonize');
             btn.click(function() {
                 // Colonize the planet and update the ship bar
-                planet.sys.colonize(player, planet);
+                player.colonize(planet);
                 shipBar.update(planet.sys);
                 
                 // Check if there are more colony ships
@@ -171,8 +165,8 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     }
     
     function populationInfo(player, colony) {
-        if (colony.exists()) {
-            var info = colony.owner === player ?
+        if (colony) {
+            var info = colony.civ === player ?
                        Math.floor(colony.population * 10) / 10 + ' / ' + colony.maxPopulation :
                        '???'
             return 'Population: ' + info;
