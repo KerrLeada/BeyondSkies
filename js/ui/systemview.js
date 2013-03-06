@@ -28,10 +28,6 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         return $('<div>');
     }
     
-    function smallDiv() {
-        return div().addClass('dispSmall');
-    }
-    
     // Creates a paragraph
     function p() {
         return $('<p>');
@@ -77,11 +73,8 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     this.display = function() {
         var sys = me._selector();
         parent.empty().append(
+            systemInfo(player, sys),
             table().addClass('sysview').append(
-                tr().append(
-                    td().html((!player.visited(sys)) ? 'Unknown system' : sys.name + ' system')
-                ),
-                
                 tr().append(
                     td().append(
                         img().attr('src', 'grfx/' + me._starType[sys.starType])
@@ -91,6 +84,31 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
             )
         );
     };
+    
+    // Creates a div that displays basic system information
+    function systemInfo(player, sys) {
+        var result = div().addClass('systemInfo');
+        if (player.visited(sys)) {
+            result.append(
+                div().addClass('systemInfoName').html(sys.name + ' system')
+            );
+            var sysInfo = player.systemInfo(sys);
+            if (sysInfo) {
+                result.append(
+                    table().addClass('systemInfoData').append(tr().append(
+                        td().html('Income: ' + Math.floor(sysInfo.income * 10) / 10),
+                        td().html(' Production: ' + Math.floor(sysInfo.production * 10) / 10)
+                    ))
+                );
+            }
+        }
+        else {
+            result.append(
+                div().addClass('systemInfoName').html('Unknown system')
+            );
+        }
+        return result;
+    }
     
     // Displays the planets (or not)
     function displayPlanets(sys) {
@@ -112,12 +130,13 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         });
     }
     
+    // Shows the planet information
     function planetInfo(player, parent, planet, hasColShip) {
         var result = colonyInfo(player, parent, planet, hasColShip);
-        var clazz = smallDiv().html('Class ' + planet.clazz);
-        var winfo = smallDiv().html(worldInfo(planet.type));
-        result.splice(0, 0, winfo, clazz);
-        return result;
+        var clazz = div().html('Class ' + planet.clazz);
+        result.splice(0, 0, clazz);
+        var winfo = div().html(worldInfo(planet.type));
+        return div().addClass('dispSmall').append(winfo, result);
     }
     
     // What to show about a planet type
@@ -133,8 +152,8 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     // Creates the colony information div
     function colonyInfo(player, parent, planet, hasColShip) {
         var colony = planet.colony;
-        var colInfo = smallDiv();
-        var popInfo = smallDiv().append(populationInfo(player, colony));
+        var colInfo = div();
+        var popInfo = div().append(populationInfo(player, colony));
         if (colony) {
             colInfo.html(colony.civ === player ? 'Colonized' : 'Colonized by ' + colony.civ.name);
         }
@@ -164,15 +183,15 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         return [colInfo, popInfo];
     }
     
+    // Creates the population info text
     function populationInfo(player, colony) {
         if (colony) {
             var info = colony.civ === player ?
                        Math.floor(colony.population * 10) / 10 + ' / ' + colony.maxPopulation :
                        '???'
             return 'Population: ' + info;
-                   
         }
-        return '---'
+        return '---';
     }
     
     // Checks if a ship is a colony ship

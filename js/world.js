@@ -262,8 +262,8 @@
         this.civ = civ;
         this.income = 0;
         this.systems = new core.Hashtable();
-        this._colonies = new core.Hashtable();
-        this._colonies.set(civ.home.name, {
+        this.colonies = new core.Hashtable();
+        this.colonies.set(civ.home.name, {
             colonies: [new ns.Colony(civ, civ.home.planets[0])],
             income: 0,
             production: 0
@@ -279,14 +279,14 @@
             if (colship) {
                 // Remove the colony ship and colonize the planet
                 sys.ships.remove(colship.uid);
-                if (me._colonies.has(sys.name)) {
-                    sys = me._colonies.get(sys.name);
+                if (me.colonies.has(sys.name)) {
+                    sys = me.colonies.get(sys.name);
                     sys.colonies.push(new ns.Colony(civ, planet));
                 }
                 else {
                     me.systems.set(sys.name, sys);
                     var col = new ns.Colony(civ, planet);
-                    me._colonies.set(sys.name, {
+                    me.colonies.set(sys.name, {
                         colonies: [col],
                         income: 0,
                         production: 0
@@ -302,7 +302,7 @@
         // Go through all the systems and colonies, update them and calculate the income and all that crap
         this.update = function() {
             me.income = 0;
-            me._colonies.foreach(function(_, sys) {
+            me.colonies.foreach(function(_, sys) {
                 var colonies = sys.colonies;
                 var income = 0;
                 var production = 0;
@@ -401,6 +401,17 @@
         
         this.systems = function() {
             return me._systems.values();
+        };
+        
+        this.systemInfo = function(sys) {
+            var info = me._colonyMan.colonies.get(sys.name);
+            if (info) {
+                info = {
+                    income: info.income,
+                    production: info.production
+                };
+            }
+            return info;
         };
         
         // Visit a system
