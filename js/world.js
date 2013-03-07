@@ -107,26 +107,28 @@
     };
     
     // A ship specification, used to create new ships
-    this.ShipSpec = function(type, maxHealth, range, speed, damage) {
+    this.ShipSpec = function(type, maxHealth, range, speed, damage, cost, production) {
         this.type = type;
         this.maxHealth = maxHealth;
         this.range = range;
         this.speed = speed;
         this.damage = damage;
+        this.cost = cost;
+        this.production = production;
         
         var me = this;
         
         // Creates a new ship from the ship spec
         // Accepts the ship name and the owner of the ship
-        this.create = function(civ) {
-            return new ns.Ship(me, civ)
+        this.create = function(civ, sys) {
+            sys.enter([new ns.Ship(me, civ)]);
         };
     };
     
     // The default specs for every civilization
     this.DefaultSpecs = {
-        ColonyShip : new ns.ShipSpec('Colony Ship', 1, 20, 1, 0),
-        Scout : new ns.ShipSpec('Scout', 1, 5000, 2, 0)
+        ColonyShip : new ns.ShipSpec('Colony Ship', 1, 20, 1, 0, 30, 5),
+        Scout : new ns.ShipSpec('Scout', 1, 5000, 2, 0, 20, 3)
     };
 
     // Represents planet types
@@ -263,11 +265,7 @@
         this.income = 0;
         this.systems = new core.Hashtable();
         this.colonies = new core.Hashtable();
-        this.colonies.set(civ.home.name, {
-            colonies: [new ns.Colony(civ, civ.home.planets[0])],
-            income: 0,
-            production: 0
-        });
+        setSys(civ.home, new ns.Colony(civ, civ.home.planets[0]));
         
         // Colonizes a planet
         this.colonize = function(planet) {
@@ -286,11 +284,7 @@
                 else {
                     me.systems.set(sys.name, sys);
                     var col = new ns.Colony(civ, planet);
-                    me.colonies.set(sys.name, {
-                        colonies: [col],
-                        income: 0,
-                        production: 0
-                    });
+                    setSys(sys, col);
                 }
             }
             else {
@@ -303,6 +297,7 @@
         this.update = function() {
             me.income = 0;
             me.colonies.foreach(function(_, sys) {
+                sys.constQueue.update();
                 var colonies = sys.colonies;
                 var income = 0;
                 var production = 0;
@@ -311,11 +306,141 @@
                     income += colonies[i].population * 1.2;
                     production += colonies[i].population * 0.75;
                 }
-                sys.income = income;
+                sys.income = income - sys.constQueue.cost;
                 sys.production = production;
-                me.income += income;
+                me.income += sys.income;
             });
         };
+        
+        function setSys(sys, col) {
+            var system = {};
+            system.colonies = [col];
+            system.income = 0;
+            system.production = 0;
+            system.constQueue = new ns.ConstQueue(civ, system, sys);
+            me.colonies.set(sys.name, system);
+        }
+    };
+    
+    // The construction queue (can only build ships atm)
+    this.ConstQueue = function(civ, sysInfo, sys) {
+        var me = this;
+        this.cost = 0;
+        this._queue = [];
+        
+        // Builds something
+        this.build = function(spec) {
+            var eta = calcEta(spec.production) + lastEta();
+            var turnCost = (me._queue.length === 0) ? spec.cost / eta : 0;
+            me._queue.push({
+                progress: 0,
+                production: spec.production,
+                expenses: 0,
+                turnCost: turnCost,
+                cost: spec.cost,
+                spec: spec,
+                eta: eta
+            });
+        };
+        
+        // Lists what is building
+        this.building = function() {
+            // Return copies
+            return me._queue.map(function(x) {
+                return {
+                    progress: x.progress,
+                    production: x.production,
+                    expenses: x.expenses,
+                    turnCost: x.turnCost,
+                    cost: x.cost,
+                    spec: x.spec,
+                    eta: x.eta
+                };
+            });
+        };
+        
+        // Update the construction queue
+        this.update = function() {
+            // Check if there is something to build
+            if (me._queue.length > 0) {
+                // Get the building thing and build on it
+                var current = me._queue[0];
+                if (current.progress + sysInfo.production < current.production) {
+                    current.progress += sysInfo.production;
+                    
+                    // If production is not 0 then build on it
+                    if (sysInfo.production > 0) {
+                        var eta = Math.ceil((current.production - current.progress) / sysInfo.production);
+                        var cost = (current.cost - current.expenses) / eta;
+                        me.cost = current.turnCost;
+                        current.expenses += current.turnCost;
+                        current.eta = eta;
+                        
+                        /**
+                         * POSSIBLE FUTURE BUG:
+                         * If the eta is 1 but there is a sudden production drop, this may cause buggy behavious!!!
+                         * Make sure this does not happen if drops in production are implemented!!!
+                         */
+                        if (eta > 1) {
+                            current.turnCost = cost;
+                        }
+                        else {
+                            current.turnCost = current.cost - current.expenses;
+                        }
+                    }
+                    else {
+                        // If the production is 0 then set the eta to infinity and make so it wont cost anything
+                        current.eta = Number.POSITIVE_INFINITY;
+                        current.turnCost = 0;
+                        me.cost = 0;
+                    }
+                    
+                    // Update the eta of the other stuff in the construction queue
+                    updateQueue();
+                }
+                else {
+                    // If whatever was building was built, create it and then get make so the final money is payed
+                    current.spec.create(civ, sys);
+                    me._queue.splice(0, 1);
+                    me.cost = current.turnCost;
+                    current.turnCost = 0;
+                    
+                    // Update the eta of the other stuff in the construction queue and the turn cost of the first thing
+                    updateQueue();
+                    if (me._queue.length > 0) {
+                        current = me._queue[0];
+                        current.turnCost = current.cost / current.eta;
+                    }
+                }
+            }
+            else if (me.cost > 0) {
+                // If there was nothing to build but there was a cost, set the cost to 0
+                me.cost = 0;
+            }
+        };
+        
+        function updateQueue() {
+            if (me._queue.length > 1) {
+                var eta = me._queue[0].eta;
+                for (var i = 1, len = me._queue.length; i < len; i++) {
+                    var current = me._queue[i];
+                    eta += calcEta(current.production);
+                    current.eta = eta;
+                }
+            }
+        }
+        
+        function calcEta(productionCost) {
+            return (sysInfo.production > 0) ?
+                    Math.ceil(productionCost / sysInfo.production) :
+                    Number.POSITIVE_INFINITY;
+        }
+        
+        function lastEta() {
+            return (me._queue.length > 0) ?
+                    me._queue[me._queue.length - 1].eta :
+                    0;
+        }
     };
     
     // Represents deep space (the space between star systems)
@@ -399,16 +524,19 @@
         
         this.colonize = this._colonyMan.colonize;
         
+        // Returns a list of the systems
         this.systems = function() {
             return me._systems.values();
         };
         
+        // Returns the information about the system
         this.systemInfo = function(sys) {
             var info = me._colonyMan.colonies.get(sys.name);
             if (info) {
                 info = {
                     income: info.income,
-                    production: info.production
+                    production: info.production,
+                    constQueue: info.constQueue
                 };
             }
             return info;

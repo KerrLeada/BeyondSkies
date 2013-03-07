@@ -78,13 +78,6 @@ table.sysview
     height: 100%;
 }
 
-/*tr, td
-{
-    border-style: solid;
-    border-width: 1px;
-    border-color: blue;
-}*/
-
 img.hiddenImg
 {
     display: none;
@@ -133,11 +126,6 @@ div.centeredText
     text-align: center;
 }
 
-/*div.tile:hover
-{
-    background-color: #111111;
-}*/
-
 div.dispSmall
 {
     font-size: x-small;
@@ -154,6 +142,12 @@ td.paddedLeft
     top: 5px;
     height: 30px;
     width: 100%;
+}
+
+.moneyDisp
+{
+    width: 130px;
+    display: inline-block;
 }
 
 .content
@@ -184,6 +178,65 @@ td.paddedLeft
     right: 5px;
 }
 
+.systemInfo
+{
+    text-align: center;
+    width: 700px;
+    height: 50px;
+    margin: 0px auto;
+}
+
+.systemInfoName
+{
+    background-color: #202020;
+}
+
+.systemInfoData
+{
+    background-color: #101010;
+    width: 100%;
+}
+
+.systemBar
+{
+    width: 600px;
+    height: 100px;
+    margin: 0px auto;
+}
+
+.constOptions
+{
+    background-color: #101010;
+    width: 200px;
+    height: 100px;
+}
+
+.constList
+{
+    background-color: #101010;
+    width: 400px;
+    height: 100px;
+}
+
+.constListBuilding
+{
+    background-color: #202020;
+}
+
+.constTable
+{
+    width: 100%;
+    margin: 0px;
+}
+
+.constTableCell
+{
+    border-collapse: collapse;
+    border-spacing: 0px;
+    margin: 0px;
+    padding: 0px;
+}
+
 .txtbtn
 {
     background: none;
@@ -199,23 +252,28 @@ td.paddedLeft
     text-decoration: underline;
 }
 
-.ship {
+.ship
+{
     background:#000;
     border-radius: 2px;
     color:#fff;
 }
-.activeShip {
+
+.activeShip
+{
     border: 2px solid red;
     border-radius: 2px;
     background:#0e0e0e;
 }
 
-.sysIndicator {
+.sysIndicator
+{
     border:3px solid black;
     display:inline-block;
     padding:4px;
 }
 
-.sysIndicator.active {
+.sysIndicator.active
+{
     border:3px solid red;
 }

@@ -72,8 +72,9 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     // Displays the system with the given name
     this.display = function() {
         var sys = me._selector();
+        var sysInfo = player.systemInfo(sys);
         parent.empty().append(
-            systemInfo(player, sys),
+            systemInfo(player, sys, sysInfo),
             table().addClass('sysview').append(
                 tr().append(
                     td().append(
@@ -83,16 +84,19 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
                 )
             )
         );
+        // TEMPORARY SOLUTION BELLOW
+        if (sysInfo) {
+            parent.append(systemBar(sysInfo));
+        }
     };
     
     // Creates a div that displays basic system information
-    function systemInfo(player, sys) {
+    function systemInfo(player, sys, sysInfo) {
         var result = div().addClass('systemInfo');
         if (player.visited(sys)) {
             result.append(
                 div().addClass('systemInfoName').html(sys.name + ' system')
             );
-            var sysInfo = player.systemInfo(sys);
             if (sysInfo) {
                 result.append(
                     table().addClass('systemInfoData').append(tr().append(
@@ -144,8 +148,9 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         var info = planetType;
         if (info !== world.PlanetType.GAS_GIANT &&
             info !== world.PlanetType.ICE_GIANT &&
-            info !== world.PlanetType.ASTEROID_FIELD)
+            info !== world.PlanetType.ASTEROID_FIELD) {
             info += ' world';
+        }
         return info;
     }
     
@@ -192,6 +197,65 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
             return 'Population: ' + info;
         }
         return '---';
+    }
+    
+    // Creates the system bar
+    function systemBar(sysInfo) {
+        var constList = table().addClass('constTable').addClass('constTableCell');
+        var result = div().addClass('systemBar').append(
+            table().append(tr().append(
+                td().addClass('constOptions').append(
+                    button().html('Scout').click(function() {
+                        build(constList, sysInfo, world.DefaultSpecs.Scout);
+                    }),
+                    button().html('Colony Ship').click(function() {
+                        build(constList, sysInfo, world.DefaultSpecs.ColonyShip);
+                    })
+                ),
+                td().addClass('constList').append(
+                    constQueue(constList, sysInfo)
+                )
+            ))
+        );
+        return result;
+    }
+    
+    // Creates the construction queue
+    function constQueue(parent, sysInfo) {
+        var content = sysInfo.constQueue.building();
+        parent.empty();
+        if (content.length > 0) {
+            parent.append(constEntry(content[0], true).addClass('constListBuilding'));
+            for (var i = 1, len = content.length; i < len; i++) {
+                parent.append(constEntry(content[i], false));
+            }
+        }
+        return parent;
+    }
+    
+    // Creates a row for the construction queue
+    function constEntry(c, showCost) {
+        return tr().append(
+            td().addClass('constTableCell').html(c.spec.type),
+            [
+                td().html(constCost(c, showCost)),
+                td().html(c.eta > 1 ? c.eta + ' turns' : '1 turn')
+            ]
+        );
+    }
+    
+    // Shows the cost (or not)
+    function constCost(c, showCost) {
+        if (showCost) {
+            return 'cost: ' + Math.floor(c.turnCost * 10) / 10;
+        }
+        return '';
+    }
+    
+    // Adds something to the construction queue
+    function build(constList, sysInfo, spec) {
+        sysInfo.constQueue.build(spec);
+        constQueue(constList, sysInfo);
     }
     
     // Checks if a ship is a colony ship

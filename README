@@ -3,8 +3,10 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Have remade the way colonization works. Basically now every civilization has a "ColonyManager" which keeps track of all the colonies as well as how much income and production they create. A "Planet" object still has a "colony" property, but that property is now null when no one has a colony on it. Colonization is now done through the "colonize" method of a "Civ" object and the "colonize" method of a "StarSystem" object has been removed.
+You can now build scouts and colony ships. The implementation is rather simple at the moment, but basically each system in the different civilizations "ColonyManager" has a construction queue that handles building ships, and what they cost and how long they take to build and so on. Each ship cost money but also production. Production determines how fast things build, while money effect the economy.
 
-Smaller changes include renaming all "owner" properties to "civ". Have also made the income lower so that buttons wont be pushed around as much (at this stage it doesnt matter, will fix that later).
+The money cost of a ship is not payed directly, but rather partially each turn until the ship is done. A ships cost per turn is basiclly subtracted from the systems income. The final cost will always be the same.
 
-Money and production cannot be used yet.
+Due to how it works, the more production you have in a system the more you have to pay each turn. This is because you are building it faster. The final cost will still be the same, you will just have to pay more each turn.
+
+Do note that at the moment this system is not very refined.
