@@ -305,7 +305,7 @@ ui._StarmapView = function(player, uni, canvas, style) {
         ctx.strokeStyle = me.style.courseColor;
         ctx.fillStyle = me.style.textColor;
         ctx.font = '10px ' + me.style.font;
-        uni.deepspace.fleets.foreach(function(_, entry) {
+        uni.deepspace.fleets.forEach(function(entry) {
             drawFleet(ctx, entry.fleet, entry.origin, entry.dest, entry.distance);
         });
     }

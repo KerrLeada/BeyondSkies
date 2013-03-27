@@ -3,10 +3,8 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-You can now build scouts and colony ships. The implementation is rather simple at the moment, but basically each system in the different civilizations "ColonyManager" has a construction queue that handles building ships, and what they cost and how long they take to build and so on. Each ship cost money but also production. Production determines how fast things build, while money effect the economy.
+Have changed how ships works. Now the ships contains modules. These modules affect what the ship can do. Every civilization has an instance of the type "ModuleManager" to keep track of their modules. A few more types and methods has been added as well, such as "ModuleRegister", which keeps track of the modules in the different specs and ships. The modules themselves come in 4 forms. "EngineModule" for engines, "SensorModule" for sensors, "WeaponModule" for weapons and "ColonyModule" for colonies. They all derive from the "Module" type. They also have a "register" method, which accepts a "ModuleRegister", allowing them to add themselves to it. A "ModuleView" type has been added for allowing safer viewing and immutable (as much as javascript allows it, anyway) view of modules from a "ModuleRegister". This type is not used that much, and may be removed if it turns out to not be useful enough, but it might be good to have for an upcoming feature (might).
 
-The money cost of a ship is not payed directly, but rather partially each turn until the ship is done. A ships cost per turn is basiclly subtracted from the systems income. The final cost will always be the same.
+The way costs are handled has been tweaked. The modules and specs has one property called "cost", rather then "cost" and "production", which in turn contains three things. "money", which is how much money it costs, "production", which is how much production it costs, and "add", which is a function that adds two costs together and returns a new cost object.
 
-Due to how it works, the more production you have in a system the more you have to pay each turn. This is because you are building it faster. The final cost will still be the same, you will just have to pay more each turn.
-
-Do note that at the moment this system is not very refined.
+"Hashtable" has been changed. The "foreach" method has been renamed to "forEach" and calls the provided function with first the element and then the key. This is done to do things like javascript already does its "forEach" method for arrays, making it easier to port code between the two. The change from key-value to value-key affects all other methods as well.

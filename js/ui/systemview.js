@@ -39,6 +39,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     }
 
     var me = this;
+    var ModuleFlags = world.ModuleFlags;
     this._selector = selector;
     
     // Setup the mapping of the panet types to the images (THIS SUCKS!!!)
@@ -117,9 +118,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     // Displays the planets (or not)
     function displayPlanets(sys) {
         var count = 0;
-        var hasColShip = sys.ships.exists(function(_, ship) {
-            return ship.civ === player && colonyShip(ship);
-        });
+        var hasColShip = sys.ships.exists(function(ship) ship.civ === player && ship.check(ModuleFlags.COLONY));
         return (!player.visited(sys)) ? td().append('System has not been visited') : sys.planets.map(function(planet) {
             ++count;
             return td().addClass('paddedLeft').append(
@@ -170,7 +169,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
                 shipBar.update(planet.sys);
                 
                 // Check if there are more colony ships
-                if (planet.sys.hasShips(player, colonyShip)) {
+                if (planet.sys.hasShips(player, function(s) s.check(ModuleFlags.COLONY))) {
                     // If there are, just replace the button with the text 'Colonized'
                     colInfo.empty().html('Colonized');
                 }
@@ -204,14 +203,11 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         var constList = table().addClass('constTable').addClass('constTableCell');
         var result = div().addClass('systemBar').append(
             table().append(tr().append(
-                td().addClass('constOptions').append(
-                    button().html('Scout').click(function() {
-                        build(constList, sysInfo, world.DefaultSpecs.Scout);
-                    }),
-                    button().html('Colony Ship').click(function() {
-                        build(constList, sysInfo, world.DefaultSpecs.ColonyShip);
-                    })
-                ),
+                appendAll(td().addClass('constOptions'), player.specs.map(function(spec) {
+                    return button().attr('type', 'button').html(spec.name).click(function() {
+                        build(constList, sysInfo, spec);
+                    });
+                })),
                 td().addClass('constList').append(
                     constQueue(constList, sysInfo)
                 )
@@ -236,16 +232,16 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     // Creates a row for the construction queue
     function constEntry(c, showCost) {
         return tr().append(
-            td().addClass('constTableCell').html(c.spec.type),
+            td().addClass('constTableCell').html(c.spec.name),
             [
-                td().html(constCost(c, showCost)),
+                td().html(constructionCost(c, showCost)),
                 td().html(c.eta > 1 ? c.eta + ' turns' : '1 turn')
             ]
         );
     }
     
     // Shows the cost (or not)
-    function constCost(c, showCost) {
+    function constructionCost(c, showCost) {
         if (showCost) {
             return 'cost: ' + Math.floor(c.turnCost * 10) / 10;
         }
@@ -258,8 +254,11 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         constQueue(constList, sysInfo);
     }
     
-    // Checks if a ship is a colony ship
-    function colonyShip(ship) {
-        return ship.type === world.DefaultSpecs.ColonyShip.type;
+    // Appends all the children to the given parent and returns the parent
+    function appendAll(parent, children) {
+        for (var i = 0, len = children.length; i < len; i++) {
+            parent.append(children[i]);
+        }
+        return parent;
     }
 };

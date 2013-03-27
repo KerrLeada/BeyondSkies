@@ -16,6 +16,17 @@ var core = new function() {
         return result;
     };
     
+    // Performs a simple and shallow copy of an object without copying anything from the prototype
+    this.copy = function(obj) {
+        var result = {};
+        for (var pt in obj) {
+            if (obj.hasOwnProperty(pt)) {
+                result[pt] = obj[pt];
+            }
+        }
+        return result;
+    };
+    
     // A simple hashtable
     var MyHashtable = function(other) {
         var me = this;
@@ -24,7 +35,7 @@ var core = new function() {
         
         // If there was a provided hashtable, add its contents
         if (other) {
-            other.foreach(function(key, value) {
+            other.forEach(function(value, key) {
                 me.set(key, value);
             });
         }
@@ -46,11 +57,11 @@ var core = new function() {
     };
     
     // Used to move loop through the hashtable
-    MyHashtable.prototype.foreach = function(f) {
+    MyHashtable.prototype.forEach = function(f) {
         var elems = this._elems;
         for (var key in elems) {
             if (elems.hasOwnProperty(key)) {
-                f(key, elems[key]);
+                f(elems[key], key);
             }
         }
     };
@@ -61,7 +72,7 @@ var core = new function() {
     MyHashtable.prototype.find = function(pred) {
         var elems = this._elems;
         for (var k in elems) {
-            if (elems.hasOwnProperty(k) && pred(k, elems[k])) {
+            if (elems.hasOwnProperty(k) && pred(elems[k], k)) {
                 return elems[k];
             }
         }
@@ -94,7 +105,7 @@ var core = new function() {
     // Returns the values
     MyHashtable.prototype.values = function() {
         var results = new Array();
-        this.foreach(function(_, value) {
+        this.forEach(function(value) {
             results.push(value);
         });
         return results;
@@ -103,7 +114,7 @@ var core = new function() {
     // Returns the keys
     MyHashtable.prototype.keys = function() {
         var results = new Array();
-        this.foreach(function(key, _) {
+        this.forEach(function(_, key) {
             results.push(key);
         });
         return results;
