@@ -65,11 +65,6 @@
         var me = this;
         this.speed = speed;
         this.range = range;
-        
-        // Registers the module as an engine
-        this.register = function(reg) {
-            reg.registerEngine(me);
-        };
     };
     ns.EngineModule.prototype = Object.create(ns.Module.prototype);
     
@@ -77,11 +72,6 @@
     ns.SensorModule = function(name, cost) {
         Module.call(this, name, ModuleFlags.SENSOR, cost);
         var me = this;
-        
-        // Registers the module as a sensor
-        this.register = function(reg) {
-            reg.registerSensor(me);
-        };
     };
     ns.SensorModule.prototype = Object.create(ns.Module.prototype);
     
@@ -90,11 +80,6 @@
         Module.call(this, name, ModuleFlags.WEAPON, cost);
         var me = this;
         this.attack = attack;
-        
-        // Register the module as a weapon
-        this.register = function(reg) {
-            reg.registerWeapon(me);
-        };
     };
     ns.WeaponModule.prototype = Object.create(ns.Module.prototype);
     
@@ -102,112 +87,33 @@
     ns.ColonyModule = function(name, cost) {
         Module.call(this, name, ModuleFlags.COLONY, cost);
         var me = this;
-        
-        // Register the module as a colonization module
-        this.register = function(reg) {
-            reg.registerColonizer(me);
-        };
     };
     ns.ColonyModule.prototype = Object.create(ns.Module.prototype);
-    
-    // Represents a view of modules
-    // Basically it prevents any accidental writing or editing of the modules of something
-    ns.ModuleView = function(engines, sensors, weapons, colonization) {
-        var me = this;
-        var modules = engines.concat(sensors, weapons, colonization);
-        
-        // Returns all the engine modules
-        this.engines = function() {
-            return engines.slice();
-        };
-        
-        // Returns all the sensor modules
-        this.sensors = function() {
-            return sensors.slice();
-        };
-        
-        // Returns all the weapon modules
-        this.weapons = function() {
-            return weapons.slice();
-        };
-        
-        // Returns all the colonization modules
-        this.colonization = function() {
-            return colonization.slice();
-        };
-        
-        // Returns a list of all the available modules
-        this.modules = function() {
-            return modules.slice();
-        };
-    };
     
     // Manages the modules of a civilization
     ns.ModuleManager = function() {
         var me = this;
-        this._engines = [ns.ModuleManager.COLONY_ENGINE,
-                         ns.ModuleManager.SCOUT_ENGINE,
-                         new ns.EngineModule("Snail Engine", 1, 40, mkcost(10, 11))];
-        this._sensors = [new ns.SensorModule("Tachyon Sensor", mkcost(3, 3)),
-                         new ns.SensorModule("Gamma Sensor", mkcost(3, 3))];
-        this._weapons = [new ns.WeaponModule("Ripper", 2, mkcost(3, 4)),
-                         new ns.WeaponModule("Breaker", 4, mkcost(5, 4)),
-                         new ns.WeaponModule("Slapper", 1, mkcost(1, 1))];
-        this._colonization = [ns.ModuleManager.COLONY_MODULE];
-        this._modMan = new ns.ModuleView(this._engines, this._sensors, this._weapons, this._colonization);
-        
-        // Returns a ModuleView over the available modules
-        this.modules = function() {
-            return me._modMan;
-        };
-    };
-    ns.ModuleManager.COLONY_ENGINE = new ns.EngineModule("Flash Engine", 3, 20, mkcost(10, 8));
-    ns.ModuleManager.SCOUT_ENGINE = new ns.EngineModule("Headslam Engine", 4, 99999, mkcost(5, 8));
-    ns.ModuleManager.COLONY_MODULE = new ns.ColonyModule("Aeres Colonization Module", mkcost(8, 5));
-    
-    
-    // Represents a register of modules
-    ns.ModuleRegister = function(other) {
-        var me = this;
         this.engines = [];
         this.sensors = [];
         this.weapons = [];
-        this.colonization = [];
-        this.modules = [];
-    
-        // Registers an engine
-        this.registerEngine = function(engine) {
-            me.engines.push(engine);
-            me.modules.push(engine);
-        };
-        
-        // Registers a sensor
-        this.registerSensor = function(sensor) {
-            me.sensors.push(sensor);
-            me.modules.push(sensor);
-        };
-        
-        // Register a weapon
-        this.registerWeapon = function(weapon) {
-            me.weapons.push(weapon);
-            me.modules.push(weapon);
-        };
-        
-        // Register a colonization module
-        this.registerColonizer = function(colonyMod) {
-            me.colonization.push(colonyMod);
-            me.modules.push(colonyMod);
-        };
-        
-        // Returns a new view over the different modules
-        this.moduleView = function() {
-            return new ns.ModuleView(me.engines, me.sensors, me.weapons, me.colonization);
-        };
-        
-        // If there was an other register provided, copy its content
-        if (other) {
-            other.modules.forEach(function(mod) mod.register(me));
+        this.other = [];
+        this.all = [];
+
+        // Adds the given array of modules to the given target array
+        function addAll(target, toAdd) {
+            if (toAdd) {
+                target.push.apply(target, toAdd);
+                me.all.push.apply(me.all, toAdd);
+            }
         }
+
+        // Adds the modules in the given module object to the module manager
+        this.addModules = function(mods) {
+            addAll(me.engines, mods.engines);
+            addAll(me.sensors, mods.sensors);
+            addAll(me.weapons, mods.weapons);
+            addAll(me.other, mods.other);
+        };
     };
     
     // Represents a fleet
@@ -277,13 +183,29 @@
     };
     
     // A ship specification, used to create new ships
-    //this.ShipSpec = function(type, maxHealth, range, speed, damage, cost, production) {
     ns.ShipSpec = function(civ, name, hull, engine, modules) {
         var me = this;
         this.civ = civ;
         this.name = name;
         this.hull = hull;
-        this.modules = new ns.ModuleRegister();
+
+        // Set the modules
+        var mods = {};
+        mods.engine = engine;
+        mods.sensors = modules.sensors || [],
+        mods.weapons = modules.weapons || [],
+        mods.other = modules.other || [];
+        mods.all = [engine].concat(mods.sensors, mods.weapons, mods.other);
+        this._modules = mods;
+        this.modules = function() {
+            return {
+                engine: mods.engine,
+                sensors: mods.sensors,
+                weapons: mods.weapons,
+                other: mods.other,
+                all: mods.all
+            };
+        };
         
         // Set the specs base stats
         this.maxHealth = hull.maxHealth;
@@ -291,20 +213,18 @@
         this.range = engine.range;
         this.speed = engine.speed;
         this.attack = 0;
-        this.flags = engine.flag;
+        this.flags = ModuleFlags.NONE;
         this.cost = hull.cost;
         
         // Applies the effect of the modules
-        modules.forEach(function(mod) {
+        mods.all.forEach(function(mod) {
             me.maxHealth += mod.health;
             me.range += mod.range;
             me.speed += mod.speed;
             me.attack += mod.attack;
             me.flags |= mod.flag;
             me.cost = me.cost.add(mod.cost);
-            mod.register(me.modules);
         });
-        this.modules.registerEngine(engine);
         
         // Creates a new ship from the ship spec
         // Accepts the ship name and the owner of the ship
@@ -318,36 +238,22 @@
     ns.SpecManager = function(civ) {
         var me = this;
         this._specs = new core.Hashtable();
-        this._specs.set('Colony Ship', new ns.ShipSpec(civ, 'Colony Ship', new ns.Hull('Colony Hull', 1, 1, mkcost(1, 1)), ns.ModuleManager.COLONY_ENGINE, [ns.ModuleManager.COLONY_MODULE]));
-        this._specs.set('Scout', new ns.ShipSpec(civ, 'Scout', new ns.Hull('Scout Hull', 10, 1, mkcost(1, 1)), ns.ModuleManager.SCOUT_ENGINE, []));
 
         // Adds a spec
         this.addSpec = function(name, hull, engine, modules) {
-            if (!me._specs.has(spec.type)) {
+            if (!me._specs.has(name)) {
+                if (!modules) {
+                    modules = {};
+                }
                 me._specs.set(name, new ns.ShipSpec(civ, name, hull, engine, modules));
                 return true;
             }
             return false;
         };
         
-        // Loops through the specs
-        this.forEach = function(f) {
-            me._specs.forEach(function(spec) {
-                f(spec);
-            });
-        };
-        
-        this.map = function(f) {
-            var result = [];
-            me._specs.forEach(function(spec) {
-                result.push(f(spec));
-            });
-            return result;
-        };
-        
-        this.list = function() {
-            return me._specs.values();
-        };
+        this.forEach = function(f) me._specs.forEach(f);
+        this.map = function(f) me._specs.map(f);
+        this.list = function() me._specs.values();
         
         this.create = function(type, sys) {
             return me._specs.get(type).create(sys);
@@ -360,7 +266,7 @@
         var me = this;
         this.civ = civ;
         this.type = spec.name;
-        this.modules = new ns.ModuleRegister(spec.modules);
+        this.modules = spec.modules();
         this.system = null;
         this.uid = 'shp' + ++shipUid;
         
@@ -677,15 +583,15 @@
         }
         
         function calcEta(productionCost) {
-            return (sysInfo.production > 0) ?
-                    Math.ceil(productionCost / sysInfo.production) :
-                    Number.POSITIVE_INFINITY;
+            if (sysInfo.production > 0)
+                return Math.ceil(productionCost / sysInfo.production);
+            return Number.POSITIVE_INFINITY;
         }
         
         function lastEta() {
-            return (me._queue.length > 0) ?
-                    me._queue[me._queue.length - 1].eta :
-                    0;
+            if (me._queue.length > 0)
+                return me._queue[me._queue.length - 1].eta;
+            return 0;
         }
     };
     
@@ -802,16 +708,16 @@
         
         // Returns the civilizations the current civilization knows exist in the given system
         this.civsIn = function(sys) {
-            return me._systems.has(sys.name) ?
-                   sys.civs():
-                   me._visitedSystems.get(sys.name);
+            if (me._systems.has(sys.name))
+                return sys.civs();
+            return me._visitedSystems.get(sys.name);
         };
         
         // Returns the ships the current civilization knows exist in the system
         this.shipsIn = function(sys) {
-            return me.visited(sys) ?
-                   sys.ships.values():
-                   [];
+            if (me.visited(sys))
+                return sys.ships.values();
+            return [];
         };
         
         this.update = function() {

@@ -101,6 +101,16 @@ var core = new function() {
         }
         return chosen;
     };
+
+    // Applies the given function to each element in the hashtable, returning
+    // an array of the results
+    MyHashtable.prototype.map = function(f) {
+        var results = [];
+        this.forEach(function(value, key) {
+            results.push(f(value, key));
+        });
+        return results;
+    };
     
     // Returns the values
     MyHashtable.prototype.values = function() {

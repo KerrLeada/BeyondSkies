@@ -3,8 +3,10 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Have changed how ships works. Now the ships contains modules. These modules affect what the ship can do. Every civilization has an instance of the type "ModuleManager" to keep track of their modules. A few more types and methods has been added as well, such as "ModuleRegister", which keeps track of the modules in the different specs and ships. The modules themselves come in 4 forms. "EngineModule" for engines, "SensorModule" for sensors, "WeaponModule" for weapons and "ColonyModule" for colonies. They all derive from the "Module" type. They also have a "register" method, which accepts a "ModuleRegister", allowing them to add themselves to it. A "ModuleView" type has been added for allowing safer viewing and immutable (as much as javascript allows it, anyway) view of modules from a "ModuleRegister". This type is not used that much, and may be removed if it turns out to not be useful enough, but it might be good to have for an upcoming feature (might).
+The module system has been reworked. The "ModuleView" type has been removed. So has "ModuleRegister". Modules no longer have a "register" method. Rather, the "ShipSpec" constructor simply takes an object that it gets the weapons, sensors and other modules from. The colonization module belongs to the "other" category.
 
-The way costs are handled has been tweaked. The modules and specs has one property called "cost", rather then "cost" and "production", which in turn contains three things. "money", which is how much money it costs, "production", which is how much production it costs, and "add", which is a function that adds two costs together and returns a new cost object.
+The "Hashtable" type has gotten a new method called "map", which applies the content of the "Hashtable" instance to a given function and returns an array containing the results.
 
-"Hashtable" has been changed. The "foreach" method has been renamed to "forEach" and calls the provided function with first the element and then the key. This is done to do things like javascript already does its "forEach" method for arrays, making it easier to port code between the two. The change from key-value to value-key affects all other methods as well.
+A new "Designer" button has appeared at the top of the screen. This is because the next thing planned is to make a ship designer, so the player can use the module system to create their own ship specs.
+
+A few general bug fixes has been done as well.

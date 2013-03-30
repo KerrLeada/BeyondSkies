@@ -2,11 +2,12 @@
 var ui = ui || {};
 
 // Handles the "stage", which basically means it 
-ui.Stage = function(player, uni, canvas, sysView, shipView) {
+ui.Stage = function(player, uni, canvas, contentView, shipView) {
     var me = this;
     this.shipBar = new ui.ShipBar(player, shipView);
     this.starmap = new ui.Starmap(player, uni, canvas);
-    this.systemView = new ui.SystemView(player, uni, this.shipBar, me.starmap.selected, sysView);
+    this.systemView = new ui.SystemView(player, uni, this.shipBar, me.starmap.selected, contentView);
+    this.designerView = new ui.DesignerView(player, contentView);
     this.active = this.starmap;
     this._hasSelection = false;
 
@@ -31,13 +32,17 @@ ui.Stage = function(player, uni, canvas, sysView, shipView) {
     
     // Make so if a system is double clicked, it is entered
     canvas.addEventListener('dblclick', function() {
-        me.viewSystem();
+        if (me.starmap.highlighted() === me.starmap.selected()) {
+            me.viewSystem();
+        }
     }, false);
     
     // Make so the starmap reacts to mouse movements
     canvas.addEventListener('mousemove', function(e) {
-        var pos = getMousePos(canvas, e);
-        me.starmap.highlight(pos.x, pos.y);
+        if (me.active === me.starmap) {
+            var pos = getMousePos(canvas, e);
+            me.starmap.highlight(pos.x, pos.y);
+        }
     }, false);
     
     // Make so the starmap reacts to when the ship bar selection changes
@@ -61,7 +66,7 @@ ui.Stage = function(player, uni, canvas, sysView, shipView) {
     this.viewStarmap = function() {
         if (me.active !== me.starmap) {
             me.active = me.starmap;
-            sysView.hide();
+            contentView.hide();
             canvas.style.display = 'block';
             me.starmap.display();
         }
@@ -69,13 +74,13 @@ ui.Stage = function(player, uni, canvas, sysView, shipView) {
     
     // Shows the system view
     this.viewSystem = function() {
-        if (me.active !== me.systemView) {
-            me.active = me.systemView;
-            me.systemView.display();
-            canvas.style.display = 'none';
-            sysView.show();
-        }
+        view(me.systemView);
     };
+
+    // Shows the designer view
+    this.viewDesigner = function() {
+        view(me.designerView);
+    }
     
     // Displays the active ui
     this.display = function() {
@@ -87,6 +92,19 @@ ui.Stage = function(player, uni, canvas, sysView, shipView) {
         me.active.display();
         me.shipBar.update(me.starmap.selected());
     };
+
+    // Shows a view (but not the starmap view)
+    function view(toView) {
+        if (me.active !== toView) {
+            prev = me.active;
+            me.active = toView;
+            toView.display();
+            if (prev === me.starmap) {
+                canvas.style.display = 'none';
+                contentView.show();
+            }
+        }
+    }
     
     // Gets the mouse position
     function getMousePos(canvas, e) {

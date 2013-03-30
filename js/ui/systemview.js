@@ -3,39 +3,55 @@ var ui = ui || {};
 
 // Handles the system view
 ui.SystemView = function(player, uni, shipBar, selector, parent) {
+    // Helps with the construction of html elements
+    function htmlElem(elem, clazz) {
+        var e = $(elem);
+        if (clazz) {
+            if (clazz instanceof Array) {
+                clazz.forEach(function(cls) {
+                    e.addClass(cls);
+                });
+            }
+            else {
+                e.addClass(clazz);
+            }
+        }
+        return e;
+    }
+
     // Creates a table
-    function table() {
-        return $('<table>');
+    function table(clazz) {
+        return htmlElem('<table>', clazz);
     }
     
     // Creates a tr
-    function tr() {
-        return $('<tr>');
+    function tr(clazz) {
+        return htmlElem('<tr>', clazz);
     }
     
     // Creates a td
-    function td() {
-        return $('<td>');
+    function td(clazz) {
+        return htmlElem('<td>', clazz);
     }
     
     // Creates an img
-    function img() {
-        return $('<img>');
+    function img(clazz) {
+        return htmlElem('<img>', clazz);
     }
     
     // Creates a div
-    function div() {
-        return $('<div>');
+    function div(clazz) {
+        return htmlElem('<div>', clazz);
     }
     
     // Creates a paragraph
-    function p() {
-        return $('<p>');
+    function p(clazz) {
+        return htmlElem('<p>', clazz);
     }
     
     // Creates a button
-    function button() {
-        return $('<button>');
+    function button(clazz) {
+        return htmlElem('<button>', clazz);
     }
 
     var me = this;
@@ -93,14 +109,14 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     
     // Creates a div that displays basic system information
     function systemInfo(player, sys, sysInfo) {
-        var result = div().addClass('systemInfo');
+        var result = div('systemInfo');
         if (player.visited(sys)) {
             result.append(
-                div().addClass('systemInfoName').html(sys.name + ' system')
+                div('systemInfoName').html(sys.name + ' system')
             );
             if (sysInfo) {
                 result.append(
-                    table().addClass('systemInfoData').append(tr().append(
+                    table('systemInfoData').append(tr().append(
                         td().html('Income: ' + Math.floor(sysInfo.income * 10) / 10),
                         td().html(' Production: ' + Math.floor(sysInfo.production * 10) / 10)
                     ))
@@ -109,7 +125,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         }
         else {
             result.append(
-                div().addClass('systemInfoName').html('Unknown system')
+                div('systemInfoName').html('Unknown system')
             );
         }
         return result;
@@ -119,18 +135,24 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     function displayPlanets(sys) {
         var count = 0;
         var hasColShip = sys.ships.exists(function(ship) ship.civ === player && ship.check(ModuleFlags.COLONY));
-        return (!player.visited(sys)) ? td().append('System has not been visited') : sys.planets.map(function(planet) {
-            ++count;
-            return td().addClass('paddedLeft').append(
-                        div().addClass('centeredText').append(
+        if (!player.visited(sys)) {
+            var result = td().append('System has not been visited')
+        }
+        else {
+            var result = sys.planets.map(function(planet) {
+                ++count;
+                return td('paddedLeft').append(
+                    div('centeredText').append(
                         img().attr('src', 'grfx/' + me._mapping[planet.type]),
                         p().append(
                             sys.name + ' ' + planet.order,
                             planetInfo(player, parent, planet, hasColShip)
                         )
                     )
-            )
-        });
+                )
+            });
+        }
+        return result;
     }
     
     // Shows the planet information
@@ -139,7 +161,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         var clazz = div().html('Class ' + planet.clazz);
         result.splice(0, 0, clazz);
         var winfo = div().html(worldInfo(planet.type));
-        return div().addClass('dispSmall').append(winfo, result);
+        return div('dispSmall').append(winfo, result);
     }
     
     // What to show about a planet type
@@ -164,19 +186,10 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         else if (hasColShip) {
             var btn = button().attr('type', 'button').html('Colonize');
             btn.click(function() {
-                // Colonize the planet and update the ship bar
+                // Colonize the planet and update the system view and ship bar
                 player.colonize(planet);
                 shipBar.update(planet.sys);
-                
-                // Check if there are more colony ships
-                if (planet.sys.hasShips(player, function(s) s.check(ModuleFlags.COLONY))) {
-                    // If there are, just replace the button with the text 'Colonized'
-                    colInfo.empty().html('Colonized');
-                }
-                else {
-                    // If there are not any more colony ships, redisplay the system
-                    me.display(player, parent);
-                }
+                me.display(player, parent);
                 popInfo.empty().append(populationInfo(player, colony));
             });
             colInfo.append(btn);
@@ -200,20 +213,29 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     
     // Creates the system bar
     function systemBar(sysInfo) {
-        var constList = table().addClass('constTable').addClass('constTableCell');
-        var result = div().addClass('systemBar').append(
+        var constList = table(['constTable', 'constTableCell']);
+        var result = div('systemBar').append(
             table().append(tr().append(
-                appendAll(td().addClass('constOptions'), player.specs.map(function(spec) {
-                    return button().attr('type', 'button').html(spec.name).click(function() {
-                        build(constList, sysInfo, spec);
-                    });
-                })),
-                td().addClass('constList').append(
-                    constQueue(constList, sysInfo)
-                )
+                constMenu(constList, sysInfo),
+                td('constList').append(constQueue(constList, sysInfo))
             ))
         );
         return result;
+    }
+
+    // Creates the construction menu
+    function constMenu(constList, sysInfo) {
+        var menu = td('constOptions');
+        player.specs.forEach(function(spec) {
+            var btn = button();
+            btn.attr('type', 'button');
+            btn.html(spec.name);
+            btn.click(function() {
+                build(constList, sysInfo, spec);
+            });
+            menu.append(btn);
+        });
+        return menu;
     }
     
     // Creates the construction queue
@@ -232,7 +254,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     // Creates a row for the construction queue
     function constEntry(c, showCost) {
         return tr().append(
-            td().addClass('constTableCell').html(c.spec.name),
+            td('constTableCell').html(c.spec.name),
             [
                 td().html(constructionCost(c, showCost)),
                 td().html(c.eta > 1 ? c.eta + ' turns' : '1 turn')
@@ -242,9 +264,8 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     
     // Shows the cost (or not)
     function constructionCost(c, showCost) {
-        if (showCost) {
+        if (showCost)
             return 'cost: ' + Math.floor(c.turnCost * 10) / 10;
-        }
         return '';
     }
     
@@ -252,13 +273,5 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     function build(constList, sysInfo, spec) {
         sysInfo.constQueue.build(spec);
         constQueue(constList, sysInfo);
-    }
-    
-    // Appends all the children to the given parent and returns the parent
-    function appendAll(parent, children) {
-        for (var i = 0, len = children.length; i < len; i++) {
-            parent.append(children[i]);
-        }
-        return parent;
     }
 };
