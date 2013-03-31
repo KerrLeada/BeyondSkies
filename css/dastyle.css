@@ -40,20 +40,20 @@ a.sysnameSel
     z-index:1;
 }
 #info_central {
-    background:rgba(255,255,255,0.85);
-    margin:0 auto;
-    position:relative;
-    top:30%;
+    background: rgba(255,255,255,0.85);
+    margin: 0 auto;
+    position: relative;
+    top: 30%;
     width: 250px;
-    height:200px;
+    height: 200px;
 }
 #info_central .close {
     position: absolute;
-    top:-5px;
+    top: -5px;
     right: -5px;
-    background:#999;
-    height:auto;
-    width:auto;
+    background: #999;
+    height: auto;
+    width: auto;
     display: block;
 }
 #moneydisp
@@ -81,11 +81,6 @@ table.sysview
 img.hiddenImg
 {
     display: none;
-}
-
-span.righted
-{
-    padding-left: 10px;
 }
 
 span.button
@@ -166,16 +161,75 @@ td.paddedLeft
     width: 100%;
 }
 
+.righted
+{
+    padding-left: 20px;
+}
+
+.designerFrame
+{
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.designerHead
+{
+    padding-bottom: 20px;
+}
+
+.designerOptions
+{
+    background-color: #101010;
+    padding-top: 3px;
+}
+
+.designerLeftPanel
+{
+    background-color: #101010;
+    padding-top: 3px;
+    padding-left: 10px;
+    width: 300px;
+    height: 400px;
+    float: left;
+}
+
+.designerModStats
+{
+    background-color: #101010;
+    padding-top: 3px;
+    padding-left: 20px;
+    width: 200px;
+    height: 300px;
+    float: right;
+}
+
+.designerLeftNStats
+{
+    width: 550px;
+}
+
+.catBtn
+{
+    /* Default color for web browsers without gradient support 
+    background: #202020;*/
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
 .maxed
 {
     width: 100%;
     height: 100%;
 }
 
-.endturn
+.wide
 {
-    position: absolute;
-    right: 5px;
+    width: 100%;
+}
+
+.tall
+{
+    height: 100%;
 }
 
 .systemInfo
@@ -186,7 +240,7 @@ td.paddedLeft
     margin: 0px auto;
 }
 
-.systemInfoName
+.infoTitle
 {
     background-color: #202020;
 }
@@ -237,24 +291,52 @@ td.paddedLeft
     padding: 0px;
 }
 
-.txtbtn
+.endturn
 {
-    background: none;
-    border: none;
-    margin: 0;
-    padding: 0;
-    color: #6666FF;
+    position: absolute;
+    right: 5px;
 }
 
-.txtbtn:hover
+.btn
 {
-    cursor:pointer;
+    /* Default color for web browsers without gradient support 
+    background: #202020;*/
+    background: #FFAA00;
+    background: -moz-linear-gradient(top, #FFAA00, #FF4400);
+    background: -webkit-gradient(linear, left top, left bottom, from(#FFAA00), to(#FF4400));
+
+    border: 1px solid black;
+    border-radius: 5px;
+    margin: 0px;
+    padding: 1px;
+    color: #000000;
+}
+
+.btn:hover
+{
+    cursor: pointer;
     text-decoration: underline;
+}
+
+.btn:active
+{
+    background: #FFBB11;
+    background: -moz-linear-gradient(top, #FFCC44, #FF7744);
+    background: -webkit-gradient(linear, left top, left bottom, from(#FFCC44), to(#FF7744));
+}
+
+.btn:disabled
+{
+    background: #DD8800;
+    background: -moz-linear-gradient(top, #A68400, #A60700);
+    background: -webkit-gradient(linear, left top, left bottom, from(#A68400), to(#A60700));
+    cursor: default;
+    text-decoration: none;
 }
 
 .ship
 {
-    background:#000;
+    background:#000000;
     border-radius: 2px;
     color:#FFFFFF;
 }

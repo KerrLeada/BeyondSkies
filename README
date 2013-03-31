@@ -3,6 +3,10 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Minor update. Have added a "newCtor" function to the "core" namespace. It accepts a constructor function that the new constructor will get its prototype from, and a constructor function. It also makes so the constructor function can call a method called "_super", which basically calls the constructor function for the prototype. If "_super" already exists in the prototype it is not replaced.
+Have started to implement the spec designer. It consists of a new type called "DesignerView" in the "ui" namespace. At the moment it is not complete, and you cannot actually create a new spec yet, but you can visit it and check it out.
 
-Have also played around a little with colors and fonts and such.
+A new "bind" function has been added to the "core" namespace. This function takes two arguments. The first is an object, the second a function or method. It returns a function. When that function is called, it will call the second argument with the first argument as "this" and whatever arguments has been given the function will be passed along. This is basically a way to avoid having to write a function just to call a method on another object.
+
+Have also fixed a few bugs that occured because some code was used that worked in Firefox but not other web browsers. This has been corrected. Must remember to test in more browsers :P.
+
+Have also played around a little with the ui, most notably the appearence of some of the buttons.

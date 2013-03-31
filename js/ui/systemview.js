@@ -3,60 +3,18 @@ var ui = ui || {};
 
 // Handles the system view
 ui.SystemView = function(player, uni, shipBar, selector, parent) {
-    // Helps with the construction of html elements
-    function htmlElem(elem, clazz) {
-        var e = $(elem);
-        if (clazz) {
-            if (clazz instanceof Array) {
-                clazz.forEach(function(cls) {
-                    e.addClass(cls);
-                });
-            }
-            else {
-                e.addClass(clazz);
-            }
-        }
-        return e;
-    }
-
-    // Creates a table
-    function table(clazz) {
-        return htmlElem('<table>', clazz);
-    }
-    
-    // Creates a tr
-    function tr(clazz) {
-        return htmlElem('<tr>', clazz);
-    }
-    
-    // Creates a td
-    function td(clazz) {
-        return htmlElem('<td>', clazz);
-    }
-    
-    // Creates an img
-    function img(clazz) {
-        return htmlElem('<img>', clazz);
-    }
-    
-    // Creates a div
-    function div(clazz) {
-        return htmlElem('<div>', clazz);
-    }
-    
-    // Creates a paragraph
-    function p(clazz) {
-        return htmlElem('<p>', clazz);
-    }
-    
-    // Creates a button
-    function button(clazz) {
-        return htmlElem('<button>', clazz);
-    }
-
     var me = this;
-    var ModuleFlags = world.ModuleFlags;
     this._selector = selector;
+
+    // Imports
+    var table = ui.html.table;
+    var tr = ui.html.tr;
+    var td = ui.html.td;
+    var img = ui.html.img;
+    var div = ui.html.div;
+    var p = ui.html.p;
+    var button = ui.html.button;
+    var ModuleFlags = world.ModuleFlags;
     
     // Setup the mapping of the panet types to the images (THIS SUCKS!!!)
     this._mapping = {};
@@ -112,7 +70,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         var result = div('systemInfo');
         if (player.visited(sys)) {
             result.append(
-                div('systemInfoName').html(sys.name + ' system')
+                div('infoTitle').html(sys.name + ' system')
             );
             if (sysInfo) {
                 result.append(
@@ -125,7 +83,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
         }
         else {
             result.append(
-                div('systemInfoName').html('Unknown system')
+                div('infoTitle').html('Unknown system')
             );
         }
         return result;
@@ -134,7 +92,9 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     // Displays the planets (or not)
     function displayPlanets(sys) {
         var count = 0;
-        var hasColShip = sys.ships.exists(function(ship) ship.civ === player && ship.check(ModuleFlags.COLONY));
+        var hasColShip = sys.ships.exists(function(ship) {
+            return ship.civ === player && ship.check(ModuleFlags.COLONY);
+        });
         if (!player.visited(sys)) {
             var result = td().append('System has not been visited')
         }

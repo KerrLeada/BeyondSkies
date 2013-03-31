@@ -42,6 +42,14 @@ var core = (function() {
         }
         return ctor;
     };
+
+    // Returns a function that calls "f" with "me" as this.
+    // Any arguments are passed along to "f".
+    ns.bind = function(me, f) {
+        return function() {
+            return f.apply(me, Array.prototype.slice.call(arguments));
+        };
+    };
     
     // A simple hashtable
     var MyHashtable = function(other) {

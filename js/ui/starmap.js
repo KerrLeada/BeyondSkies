@@ -8,7 +8,7 @@ ui.Starmap = function(player, uni, canvas) {
     this.selectionChanged = function() {};
     this.style = {
         font: 'Arial',
-        fontSize: {system: '15 px', civ: '10 px', eta: '10 px'},
+        fontSize: {system: '15px', civ: '10px', eta: '10px'},
         textColor: '#6666FF',
         selectionColor: 'red',
         highlightColor: 'red',

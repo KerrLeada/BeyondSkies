@@ -1,11 +1,14 @@
-﻿var world = new function() {
-    var ns = this;
+﻿var world = (function() {
+    var ns = {};
     
+    // Creates cost
     function mkcost(money, production) {    
         var result = {
             money: money,
             production: production,
-            add: function(other) mkcost(result.money + other.money, result.production + other.production)
+            add: function(other) {
+                return mkcost(result.money + other.money, result.production + other.production);
+            }
         };
         return result;
     }
@@ -28,12 +31,18 @@
     ns.ShipUtils = ShipUtils;
     
     // Function that creates a new hull
+    var hullUid = 0;
     ns.Hull = function(name, maxHealth, engineSlots, cost) {
         this.name = name;
         this.maxHealth = maxHealth;
         this.engineSlots = engineSlots;
         this.cost = cost;
+        this.uid = 'hul' + ++hullUid;
     };
+    ns.Hull.COLONY_HULL = new ns.Hull('Colony Hull', 1, 1, mkcost(1, 1));
+    ns.Hull.SMALL_HULL = new ns.Hull('Small Hull', 15, 2, mkcost(1, 1));
+    ns.Hull.MEDIUM_HULL = new ns.Hull('Medium Hull', 50, 4, mkcost(3, 3));
+    ns.Hull.LARGE_HULL = new ns.Hull('Large Hull', 130, 10, mkcost(10, 7));
     
     // Module flags
     var ModuleFlags = {
@@ -46,10 +55,13 @@
     ns.ModuleFlags = ModuleFlags;
     
     // A module
-    Module = function(name, flag, cost) {
+    var modUid = 0;
+    Module = function(name, flag, desc, cost) {
         this.name = name;
         this.flag = flag;
+        this.desc = desc;
         this.cost = cost;
+        this.uid = 'mod' + ++modUid;
         
         // The stats
         this.health = 0;
@@ -60,31 +72,32 @@
     ns.Module = Module;
     
     // The engine module
-    ns.EngineModule = core.newCtor(Module, function(name, speed, range, cost) {
-        this._super(this, name, ModuleFlags.ENGINE, cost);
+    ns.EngineModule = core.newCtor(Module, function(name, speed, range, desc, cost) {
+        this._super(this, name, ModuleFlags.ENGINE, desc, cost);
         this.speed = speed;
         this.range = range;
     });
 
     // The sensor module
-    ns.SensorModule = core.newCtor(Module, function(name, cost) {
-        this._super(this, name, ModuleFlags.SENSOR, cost);
+    ns.SensorModule = core.newCtor(Module, function(name, desc, cost) {
+        this._super(this, name, ModuleFlags.SENSOR, desc, cost);
     });
     
     // The weapon module
-    ns.WeaponModule = core.newCtor(Module, function(name, attack, cost) {
-        this._super(this, name, ModuleFlags.WEAPON, cost);
+    ns.WeaponModule = core.newCtor(Module, function(name, attack, desc, cost) {
+        this._super(this, name, ModuleFlags.WEAPON, desc, cost);
         this.attack = attack;
     });
     
     // The colony module
-    ns.ColonyModule = core.newCtor(Module, function(name, cost) {
-        this._super(this, name, ModuleFlags.COLONY, cost);
+    ns.ColonyModule = core.newCtor(Module, function(name, desc, cost) {
+        this._super(this, name, ModuleFlags.COLONY, desc, cost);
     });
     
     // Manages the modules of a civilization
     ns.ModuleManager = function() {
         var me = this;
+        this.hulls = [ns.Hull.COLONY_HULL, ns.Hull.SMALL_HULL, ns.Hull.MEDIUM_HULL, ns.Hull.LARGE_HULL];
         this.engines = [];
         this.sensors = [];
         this.weapons = [];
@@ -106,6 +119,8 @@
             addAll(me.weapons, mods.weapons);
             addAll(me.other, mods.other);
         };
+
+        this.map = core.bind(me.all, me.all.map);
     };
     
     // Represents a fleet
@@ -229,23 +244,24 @@
     // Stores specs for a civilization
     ns.SpecManager = function(civ) {
         var me = this;
-        this._specs = new core.Hashtable();
+        var specs = new core.Hashtable();
+        this._specs = specs;
 
         // Adds a spec
         this.addSpec = function(name, hull, engine, modules) {
-            if (!me._specs.has(name)) {
+            if (!specs.has(name)) {
                 if (!modules) {
                     modules = {};
                 }
-                me._specs.set(name, new ns.ShipSpec(civ, name, hull, engine, modules));
+                specs.set(name, new ns.ShipSpec(civ, name, hull, engine, modules));
                 return true;
             }
             return false;
         };
         
-        this.forEach = function(f) me._specs.forEach(f);
-        this.map = function(f) me._specs.map(f);
-        this.list = function() me._specs.values();
+        this.forEach = core.bind(specs, specs.forEach);
+        this.map = core.bind(specs, specs.map);
+        this.list = core.bind(specs, specs.values);
         
         this.create = function(type, sys) {
             return me._specs.get(type).create(sys);
@@ -774,4 +790,6 @@
             });
         };
     };
-};
+
+    return ns;
+}());
