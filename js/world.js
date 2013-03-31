@@ -60,35 +60,27 @@
     ns.Module = Module;
     
     // The engine module
-    ns.EngineModule = function(name, speed, range, cost) {
-        Module.call(this, name, ModuleFlags.ENGINE, cost);
-        var me = this;
+    ns.EngineModule = core.newCtor(Module, function(name, speed, range, cost) {
+        this._super(this, name, ModuleFlags.ENGINE, cost);
         this.speed = speed;
         this.range = range;
-    };
-    ns.EngineModule.prototype = Object.create(ns.Module.prototype);
-    
+    });
+
     // The sensor module
-    ns.SensorModule = function(name, cost) {
-        Module.call(this, name, ModuleFlags.SENSOR, cost);
-        var me = this;
-    };
-    ns.SensorModule.prototype = Object.create(ns.Module.prototype);
+    ns.SensorModule = core.newCtor(Module, function(name, cost) {
+        this._super(this, name, ModuleFlags.SENSOR, cost);
+    });
     
     // The weapon module
-    ns.WeaponModule = function(name, attack, cost) {
-        Module.call(this, name, ModuleFlags.WEAPON, cost);
-        var me = this;
+    ns.WeaponModule = core.newCtor(Module, function(name, attack, cost) {
+        this._super(this, name, ModuleFlags.WEAPON, cost);
         this.attack = attack;
-    };
-    ns.WeaponModule.prototype = Object.create(ns.Module.prototype);
+    });
     
     // The colony module
-    ns.ColonyModule = function(name, cost) {
-        Module.call(this, name, ModuleFlags.COLONY, cost);
-        var me = this;
-    };
-    ns.ColonyModule.prototype = Object.create(ns.Module.prototype);
+    ns.ColonyModule = core.newCtor(Module, function(name, cost) {
+        this._super(this, name, ModuleFlags.COLONY, cost);
+    });
     
     // Manages the modules of a civilization
     ns.ModuleManager = function() {

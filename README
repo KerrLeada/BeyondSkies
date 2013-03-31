@@ -3,10 +3,6 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-The module system has been reworked. The "ModuleView" type has been removed. So has "ModuleRegister". Modules no longer have a "register" method. Rather, the "ShipSpec" constructor simply takes an object that it gets the weapons, sensors and other modules from. The colonization module belongs to the "other" category.
+Minor update. Have added a "newCtor" function to the "core" namespace. It accepts a constructor function that the new constructor will get its prototype from, and a constructor function. It also makes so the constructor function can call a method called "_super", which basically calls the constructor function for the prototype. If "_super" already exists in the prototype it is not replaced.
 
-The "Hashtable" type has gotten a new method called "map", which applies the content of the "Hashtable" instance to a given function and returns an array containing the results.
-
-A new "Designer" button has appeared at the top of the screen. This is because the next thing planned is to make a ship designer, so the player can use the module system to create their own ship specs.
-
-A few general bug fixes has been done as well.
+Have also played around a little with colors and fonts and such.

@@ -1,12 +1,14 @@
 // Contains useful functions intended for reuse
-var core = new function() {
+var core = (function() {
+    var ns = {};
+
     // Pythagoras theorem
-    this.pythagoras = function(x, y) {
+    ns.pythagoras = function(x, y) {
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     };
     
     // Lists the properties of the given object (does not check the prototype)
-    this.listOwn = function(obj) {
+    ns.listOwn = function(obj) {
         var result = [];
         for (var pt in obj) {
             if (obj.hasOwnProperty(pt)) {
@@ -17,7 +19,7 @@ var core = new function() {
     };
     
     // Performs a simple and shallow copy of an object without copying anything from the prototype
-    this.copy = function(obj) {
+    ns.copy = function(obj) {
         var result = {};
         for (var pt in obj) {
             if (obj.hasOwnProperty(pt)) {
@@ -25,6 +27,20 @@ var core = new function() {
             }
         }
         return result;
+    };
+
+    // Creates a new constructor with the given prototype
+    ns.newCtor = function(proto, init) {
+        var ctor = function() {
+            init.apply(this, arguments);
+        };
+        ctor.prototype = Object.create(proto.prototype);
+        if (!ctor.prototype._super) {
+            ctor.prototype._super = function() {
+                proto.apply(this, Array.prototype.slice.call(arguments, 1));
+            };
+        }
+        return ctor;
     };
     
     // A simple hashtable
@@ -165,5 +181,8 @@ var core = new function() {
     };
     
     // Add the hashtable to the namespace
-    this.Hashtable = MyHashtable;
-};
+    ns.Hashtable = MyHashtable;
+
+    // Returns the "namespace"
+    return ns;
+}());

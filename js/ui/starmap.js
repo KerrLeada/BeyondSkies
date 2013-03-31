@@ -7,8 +7,9 @@ ui.Starmap = function(player, uni, canvas) {
     this._selected = player.home;
     this.selectionChanged = function() {};
     this.style = {
-        font: 'Calibri',
-        textColor: 'blue',
+        font: 'Arial',
+        fontSize: {system: '15 px', civ: '10 px', eta: '10 px'},
+        textColor: '#6666FF',
         selectionColor: 'red',
         highlightColor: 'red',
         gridColor: '#111111',
@@ -144,7 +145,7 @@ ui._StarmapView = function(player, uni, canvas, style) {
         if (!uni.deepspace.fleets.isEmpty()) {
             drawDeepSpace(ctx);
         }
-        ctx.font = '20px ' + me.style.font;
+        ctx.font = me.style.fontSize.system + ' ' + me.style.font;
         for (var i = 0, len = systems.length; i < len; i++) {
             var sys = systems[i];
             if (player.visited(sys)) {
@@ -287,14 +288,11 @@ ui._StarmapView = function(player, uni, canvas, style) {
         
         // Draw the line
         ctx.beginPath();
-        //drawLine(ctx, x, y, dest.pos.col * cellW + halfCellW, dest.pos.row * cellH + halfCellH);
         drawLine(ctx, x, y, calcX(dest.pos), calcY(dest.pos));
         ctx.stroke();
         
-        // Draw the ship
+        // Draw the ship and the eta
         ctx.drawImage(me.style.fleetImg, x - halfFltScale, y - halfFltScale, fltScale, fltScale);
-        
-        // Draw the eta
         var eta = Math.ceil(dist/fleet.speed);
         ctx.fillText('eta ' + eta, x, y + fltScale + 5); 
     }
@@ -304,7 +302,7 @@ ui._StarmapView = function(player, uni, canvas, style) {
         ctx.lineWidth = 1;
         ctx.strokeStyle = me.style.courseColor;
         ctx.fillStyle = me.style.textColor;
-        ctx.font = '10px ' + me.style.font;
+        ctx.font = me.style.fontSize.eta + ' ' + me.style.font;
         uni.deepspace.fleets.forEach(function(entry) {
             drawFleet(ctx, entry.fleet, entry.origin, entry.dest, entry.distance);
         });
@@ -340,11 +338,11 @@ ui._StarmapView = function(player, uni, canvas, style) {
     
     // Draws information about the civilization
     function drawCivInfo(ctx, civs) {
-        ctx.font = '15px ' + me.style.font;
+        ctx.font = me.style.fontSize.civ + ' ' + me.style.font;
         for (var i = 0, len = civs.length; i < len; i++) {
             var civ = civs[i];
             var msg = '(' + civ.owners.map(function(x) { return x.name; }).join(', ') + ')';
-            ctx.fillText(msg, civ.x, civ.y + halfCellH + 35);
+            ctx.fillText(msg, civ.x, civ.y + halfCellH + 27);
         }
     }
     
