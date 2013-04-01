@@ -50,6 +50,15 @@ var core = (function() {
             return f.apply(me, Array.prototype.slice.call(arguments));
         };
     };
+
+    ns.lseek = function(arr, pred) {
+        for (var i = 0, len = arr.length; i < len; i++) {
+            if (pred(arr[i])) {
+                return arr[i];
+            }
+        }
+        return undefined;
+    };
     
     // A simple hashtable
     var MyHashtable = function(other) {

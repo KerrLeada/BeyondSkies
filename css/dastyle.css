@@ -186,26 +186,38 @@ td.paddedLeft
 .designerLeftPanel
 {
     background-color: #101010;
+    float: left;
+}
+
+.designerModPanel
+{
     padding-top: 3px;
     padding-left: 10px;
     width: 300px;
     height: 400px;
-    float: left;
 }
 
-.designerModStats
+.designerShipStats
 {
     background-color: #101010;
     padding-top: 3px;
     padding-left: 20px;
-    width: 200px;
-    height: 300px;
+    width: 500px;
+    height: 200px;
     float: right;
+}
+
+.designerModStats
+{
+    padding-top: 3px;
+    padding-left: 10px;
+    width: 300px;
+    height: 75px;
 }
 
 .designerLeftNStats
 {
-    width: 550px;
+    width: 850px;
 }
 
 .catBtn
@@ -299,8 +311,7 @@ td.paddedLeft
 
 .btn
 {
-    /* Default color for web browsers without gradient support 
-    background: #202020;*/
+    /* Set the color to either #FFAA00 or, if supported, a gradient */
     background: #FFAA00;
     background: -moz-linear-gradient(top, #FFAA00, #FF4400);
     background: -webkit-gradient(linear, left top, left bottom, from(#FFAA00), to(#FF4400));
@@ -332,6 +343,29 @@ td.paddedLeft
     background: -webkit-gradient(linear, left top, left bottom, from(#A68400), to(#A60700));
     cursor: default;
     text-decoration: none;
+}
+
+.txtbtn
+{
+    background: none;
+    border: none;
+    border-bottom: 1px solid #4444FF;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    color: #4444FF; 
+}
+
+.txtbtn:hover
+{
+    border-bottom: 1px solid #7777FF;
+    color: #7777FF;
+}
+
+.txtbtn:active
+{
+    border-bottom: 1px solid #2222FF;
+    color: #2222FF;
 }
 
 .ship
