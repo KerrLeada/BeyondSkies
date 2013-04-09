@@ -45,7 +45,7 @@ ui.ShipBar = function(player, parent) {
             btn.attr('type', 'button');
             
             // Make so the button is only clickable if the ship belongs to the player
-            if (s.civ === player) {
+            if (s.civ() === player) {
                 btn.click(function() {
                     toggleSelection(btn, s);
                 });

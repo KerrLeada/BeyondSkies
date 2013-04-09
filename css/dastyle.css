@@ -193,11 +193,11 @@ td.paddedLeft
 {
     padding-top: 3px;
     padding-left: 10px;
-    width: 300px;
+    width: 330px;
     height: 400px;
 }
 
-.designerShipStats
+.designerNameNHull
 {
     background-color: #101010;
     padding-top: 3px;
@@ -217,7 +217,28 @@ td.paddedLeft
 
 .designerLeftNStats
 {
-    width: 850px;
+    width: 880px;
+    float: left;
+}
+
+.designerSelMods
+{
+    background-color: #101010;
+    margin-top: 20px;
+    padding-left: 20px;
+    width: 500px;
+    height: 260px;
+    float: right;
+}
+
+.designerShipStats
+{
+    background-color: #101010;
+    padding-top: 3px;
+    padding-left: 10px;
+    width: 300px;
+    height: 400px;
+    float: right;
 }
 
 .catBtn

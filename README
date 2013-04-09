@@ -3,4 +3,4 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Worked more on the spec designer. Have mostly moved around stuff. It should be noted that I need to rework the "ModuleManager" type to make it easier to search through the modules. At this moment I have implemented a new function, called "lseek", in the "core" namespace to get around this. It performs a linear search.
+This is a backup upload. It doesnt work properly.

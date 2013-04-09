@@ -15,6 +15,10 @@ ui.DesignerView = function(player, parent) {
     var tr = ui.html.tr;
     var td = ui.html.td;
 
+    // The modules known by the player
+    var modules = player.modules;
+    var model = new ui._DesignerViewModel();
+
     // Displays the designer view
     this.display = function() {
         var designer = div();
@@ -36,113 +40,105 @@ ui.DesignerView = function(player, parent) {
                     span('righted').html('Existing: ')
                 ),
                 span().append(player.specs.map(function(spec) {
-                    return specBtn(spec.name, designer, spec);
+                    return specBtn(designer, spec);
                 }))
             )
         );
     }
 
     // Creates a spec button
-    function specBtn(content, designer, spec) {
-        var btn = button('btn').append(content);
+    function specBtn(designer, spec) {
+        var btn = button('btn').append(spec.name);
         btn.click(function() {
-            specDesigner(designer, spec);
+            model.select(spec);
+            specDesigner(designer);
         });
         return btn;
     }
 
     // Creates the designer
-    function specDesigner(parent, spec) {
-        var mods = player.modules;
-        var sstats = div('designerShipStats');
+    function specDesigner(parent) {
+        var selNameHull = div('designerNameNHull');
         var mstats = div('designerModStats');
-        var leftPanel = div('designerModPanel').append(categories(spec, mods, mstats));
+        var leftPanel = div('designerModPanel').append(categories(mstats));
+        var selMods = div('designerSelMods');
         parent.empty().append(
             div('designerLeftNStats').append(
                 div('designerLeftPanel').append(leftPanel, mstats),
-                shipData(spec, sstats, mods)
+                [
+                    shipData(selNameHull),
+                    showShipMods(selMods)
+                ]
+            ),
+            div('designerShipStats').append(
+                div().html('Ship Stats'),
+                [
+                    div().html('Health: ???'),
+                    div().html('Range: ???'),
+                    div().html('Speed: ???'),
+                    div().html('Attack: ???')
+                ]
             )
         );
     }
 
     // Creates the ship data viewing thingy
-    function shipData(spec, parent, mods) {
+    function shipData(parent) {
         var hullStats = div('designerHead');
-        var engineStats = div('designerHead');
         return parent.empty().append(
-            inputName(spec),
+            inputName(),
             [
-                hullSelection(spec, mods, hullStats),
-                hullStats,
-                engineSelection(spec, mods, engineStats),
-                engineStats
+                hullSelection(hullStats),
+                hullStats
             ]
         );
     }
 
     // Creates the place the player can give the spec a name
-    function inputName(spec) {
-        var inpName = input();
-        if (spec) {
-            inpName.attr('value', spec.name);
-        }
+    function inputName() {
+        var inpName = input().attr('value', model.name);
         return div(['designerOptions', 'designerHead']).append('Name: ', inpName);
     }
 
-    // Creates a hull selection thing
-    function hullSelection(spec, mods, stats) {
-        var selected = spec ? spec.hull.uid : null;
-        return selection('Hull: ', selected, mods.hulls, function(hull) {
-            var cost = hull.cost;
-            stats.empty().html('Health: ' + hull.maxHealth + ' Engine slots: ' + hull.engineSlots + ' Money: ' + cost.money + ' Production: ' + cost.production);
-        });
-    }
-
-    // Creates an engine selection thing
-    function engineSelection(spec, mods, stats) {
-        var selected = spec ? spec.engine.uid : null;
-        return selection('Engine: ', selected, mods.engines, function(engine) {
-            var cost = engine.cost;
-            stats.empty().html('Speed: ' + engine.speed + ' Range: ' + engine.range + ' Money: ' + cost.money + ' Production: ' + cost.production);
-        });
-    };
-
     // Creates a selection thing (used by the functions "hullSelection" and "engineSelection")
-    function selection(title, selected, mods, updater) {
+    function hullSelection(stats) {
         var ops = [];
+        var selected = model.hull;
         if (!selected) {
             ops.push(option('---'));
         }
 
+        function updateInfo(hull) {
+            var cost = hull.cost;
+            stats.empty().html('Health: ' + hull.maxHealth + ' Size: ' + hull.size + ' Money: ' + cost.money + ' Production: ' + cost.production);
+        }
+
         // Display all the options, and select the right one
-        mods.forEach(function(curr) {
+        modules.hulls().forEach(function(curr) {
             var op = option(curr.name);
             op.attr('value', curr.uid);
             if (curr.uid === selected) {
                 op.attr('selected', true);
-                updater(curr);
+                updateInfo(curr);
             }
             ops.push(op);
         });
 
         var sel = select(ops).change(function() {
-            var curr = $(this).attr('value');
-            curr = core.lseek(mods, function(mod) {
-                return mod.uid === curr;
-            });
-            updater(curr);
+            var currUid = $(this).attr('value');
+            updateInfo(modules.hull(currUid));
         });
 
         // Return the selection thing in a div
-        return div('designerHead').append(title, sel);
+        return div('designerHead').append('Hulls: ', sel);
     }
 
     // Creates the section on the left panel where the player can see the modules
-    function categories(spec, mods, mstats) {
+    function categories(mstats) {
         // Create "parent", which contains the modules in a category, and "last", which is the currently selected category
         var stats = div('designerModStats');
         var showMod = modStats(mstats);
-        var parent = catContent(div(), mods.weapons, showMod);
+        var parent = catContent(div(), modules.weapons(), showMod);
         var last = button('catBtn').attr('disabled', true).html('Weapons');
         
         // Creates a function that displays the given modules as a category
@@ -159,13 +155,14 @@ ui.DesignerView = function(player, parent) {
 
         // hookup "last" with the weapon category to start with
         // Then create a div containing the category buttons and "parent"
-        last.click(showCategory(mods.weapons));
+        last.click(showCategory(modules.weapons()));
         return div().append(
             div().append(
                 last,
                 [
-                    button('catBtn').html('Sensors').click(showCategory(mods.sensors)),
-                    button('catBtn').html('Other').click(showCategory(mods.other))
+                    button('catBtn').html('Engines').click(showCategory(modules.engines())),
+                    button('catBtn').html('Sensors').click(showCategory(modules.sensors())),
+                    button('catBtn').html('Other').click(showCategory(modules.other()))
                 ]
             ),
             div().append(parent, stats)
@@ -208,4 +205,51 @@ ui.DesignerView = function(player, parent) {
             parent.append(div().html(title + val));
         }
     }
+
+    function showShipMods(parent) {
+        parent.empty().append(
+            'Ship Modules',
+            model.map(function(mod) {
+                return div().html(mod.name);
+            })
+        );
+        return parent;
+    }
+};
+
+ui._DesignerViewModel = function() {
+    var mods = [];
+    var me = this;
+    this.hull = null;
+    this.name = '';
+
+    function setup(name, hull, modules) {
+        me.name = name;
+        me.hull = hull;
+        mods = modules;
+    }
+
+    // Selects a spec
+    this.select = function(spec) {
+        if (spec) {
+            setup(spec.name, spec.hull, spec.modules().all());
+        }
+        else {
+            setup('', null, []);
+        }
+    };
+
+    // Adds a module
+    this.add = function(mod) {
+        mods.push(mod);
+    };
+
+    // Removes the module at the given index
+    this.remove = function(index) {
+        mods.splice(index, 1);
+    };
+
+    // Iterates through the modules
+    this.forEach = core.bind(mods, mods.forEach);
+    this.map = core.bind(mods, mods.map);
 };
