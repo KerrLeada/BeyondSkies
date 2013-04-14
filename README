@@ -3,4 +3,4 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-This is a backup upload. It doesnt work properly.
+Bug fixes. Lots of them. Still not entierly working, though. Basically, how modules and ships are handled are being reworked so that new specs can be created in a good way (I hope its a good way, anyway :P).

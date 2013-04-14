@@ -65,6 +65,16 @@ var core = (function() {
             return src.values();
         });
     };
+    
+    // Creates a getter function for an array
+    ns.arrGetter = function(src) {
+        return function(modId) {
+            if (modId) {
+                return src[modId];
+            }
+            return src.slice();
+        };
+    };
 
     // Makes sure something is not undefined
     function defined(val, errMsg) {

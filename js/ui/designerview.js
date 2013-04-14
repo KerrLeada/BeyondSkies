@@ -1,8 +1,12 @@
+'use strict';
+
 // Make sure the ui namespace exists
 var ui = ui || {};
 
 // Represents the designer view
 ui.DesignerView = function(player, parent) {
+    var me = this;
+    
     // Import the html generation stuff
     var div = ui.html.div;
     var span = ui.html.span;
@@ -18,6 +22,10 @@ ui.DesignerView = function(player, parent) {
     // The modules known by the player
     var modules = player.modules;
     var model = new ui._DesignerViewModel();
+    model.onChange = function() {
+        showSpecMods();
+        showSpecStats();
+    };
 
     // Displays the designer view
     this.display = function() {
@@ -36,7 +44,10 @@ ui.DesignerView = function(player, parent) {
             div(['infoTitle', 'wide']).html('Specs'),
             div('designerOptions').append(
                 span().append(
-                    specBtn('New spec', designer),
+                    button('btn').html('New spec').click(function() {
+                        model.selectNone();
+                        specDesigner(designer);
+                    }),
                     span('righted').html('Existing: ')
                 ),
                 span().append(player.specs.map(function(spec) {
@@ -58,34 +69,62 @@ ui.DesignerView = function(player, parent) {
 
     // Creates the designer
     function specDesigner(parent) {
-        var selNameHull = div('designerNameNHull');
         var mstats = div('designerModStats');
         var leftPanel = div('designerModPanel').append(categories(mstats));
-        var selMods = div('designerSelMods');
+        var saveBtn = button('btn').html('Save').click(function() {
+            if (model.exists) {
+                if (confirm('Are you sure you want to modify this spec?')) {
+                    model.selectNone();
+                    parent.empty();
+                }
+            }
+            else {
+                model.selectNone();
+                parent.empty();
+            }
+        });
+        var cancelBtn = button('btn').html('Cancel').click(function() {
+            if (confirm('Are you sure you want to cancel?')) {
+                model.selectNone();
+                parent.empty();
+            }
+        });
         parent.empty().append(
             div('designerLeftNStats').append(
                 div('designerLeftPanel').append(leftPanel, mstats),
                 [
-                    shipData(selNameHull),
-                    showShipMods(selMods)
+                    specData(),
+                    showSpecMods()
                 ]
             ),
-            div('designerShipStats').append(
-                div().html('Ship Stats'),
-                [
-                    div().html('Health: ???'),
-                    div().html('Range: ???'),
-                    div().html('Speed: ???'),
-                    div().html('Attack: ???')
-                ]
+            div('rightWinged').append(
+                showSpecStats(),
+                [saveBtn, cancelBtn]
             )
         );
     }
+    
+    // Used to show the spec stats
+    var showSpecStats = (function() {
+        var healthDiv = div();
+        var rangeDiv = div();
+        var speedDiv = div();
+        var attackDiv = div();
+        var selectedEffects = div('designerShipStats').append(div().html('Ship Stats'), [healthDiv, rangeDiv, speedDiv, attackDiv]);
+        return function() {
+            var stats = model.stats();
+            healthDiv.html('Health: ' + stats.maxHealth);
+            rangeDiv.html('Range: ' + stats.range);
+            speedDiv.html('Speed: ' + stats.speed);
+            attackDiv.html('Attack: ' + stats.attack);
+            return selectedEffects;
+        };
+    }());
 
     // Creates the ship data viewing thingy
-    function shipData(parent) {
+    function specData() {
         var hullStats = div('designerHead');
-        return parent.empty().append(
+        return div('designerNameNHull').empty().append(
             inputName(),
             [
                 hullSelection(hullStats),
@@ -102,31 +141,39 @@ ui.DesignerView = function(player, parent) {
 
     // Creates a selection thing (used by the functions "hullSelection" and "engineSelection")
     function hullSelection(stats) {
-        var ops = [];
-        var selected = model.hull;
-        if (!selected) {
-            ops.push(option('---'));
-        }
-
+        // Updates the hull information
         function updateInfo(hull) {
             var cost = hull.cost;
             stats.empty().html('Health: ' + hull.maxHealth + ' Size: ' + hull.size + ' Money: ' + cost.money + ' Production: ' + cost.production);
+        }
+        
+        // Create the options array and get the selected hull (and make it appear selected :P)
+        var ops = [];
+        var selected = model.hull;
+        if (!selected) {
+            var defaultOpt = option('---').attr('disabled', true).attr('selected', true);
+            ops.push(defaultOpt);
+        }
+        else {
+            updateInfo(selected);
         }
 
         // Display all the options, and select the right one
         modules.hulls().forEach(function(curr) {
             var op = option(curr.name);
             op.attr('value', curr.uid);
-            if (curr.uid === selected) {
+            if (curr === selected) {
                 op.attr('selected', true);
-                updateInfo(curr);
             }
             ops.push(op);
         });
 
+        // Make so the hull information updates when an option is selected
         var sel = select(ops).change(function() {
-            var currUid = $(this).attr('value');
-            updateInfo(modules.hull(currUid));
+            var curr = $(this).attr('value');
+            model.hull = modules.hulls(curr)
+            updateInfo(model.hull);
+            showSpecStats();
         });
 
         // Return the selection thing in a div
@@ -175,10 +222,13 @@ ui.DesignerView = function(player, parent) {
         catMods.forEach(function(mod) {
             var stsBtn = button(['txtbtn', 'wide']).html(mod.name).click(showMod(mod));
             var addBtn = button('btn').html('Add');
+            addBtn.click(function() {
+                model.add(mod);
+            });
             parent.append(table('designerHead').append(
                 tr().append(
                     td('wide').append(stsBtn),
-                    td('righted').append(addBtn)
+                    td().append(addBtn)
                 )
             ));
         });
@@ -206,23 +256,36 @@ ui.DesignerView = function(player, parent) {
         }
     }
 
-    function showShipMods(parent) {
-        parent.empty().append(
+    // Shows the currently selected modules
+    var selectedMods = div('designerSelMods');
+    function showSpecMods() {
+        selectedMods.empty().append(
             'Ship Modules',
-            model.map(function(mod) {
-                return div().html(mod.name);
+            model.map(function(mod, key) {
+                // Create the removal button
+                var removeBtn = button('btn').html('Remove');
+                removeBtn.click(function() {
+                    model.remove(key);
+                });
+                return div().append(
+                    mod.name,
+                    removeBtn
+                );
             })
         );
-        return parent;
+        return selectedMods;
     }
 };
 
 ui._DesignerViewModel = function() {
-    var mods = [];
     var me = this;
+    var mods = [];
+    this.exists = false;
     this.hull = null;
     this.name = '';
+    this.onChange = function() {};
 
+    // Setup everything
     function setup(name, hull, modules) {
         me.name = name;
         me.hull = hull;
@@ -233,23 +296,52 @@ ui._DesignerViewModel = function() {
     this.select = function(spec) {
         if (spec) {
             setup(spec.name, spec.hull, spec.modules().all());
+            me.exists = true;
         }
         else {
-            setup('', null, []);
+            me.selectNone();
         }
+    };
+    
+    this.selectNone = function() {
+        setup('', null, []);
+        me.exists = false;
     };
 
     // Adds a module
     this.add = function(mod) {
         mods.push(mod);
+        me.onChange();
     };
 
-    // Removes the module at the given index
-    this.remove = function(index) {
-        mods.splice(index, 1);
+    // Removes the module with the given key
+    this.remove = function(key) {
+        var removed = mods[key];
+        mods.splice(key, 1);
+        me.onChange();
     };
 
-    // Iterates through the modules
-    this.forEach = core.bind(mods, mods.forEach);
-    this.map = core.bind(mods, mods.map);
+    // Iteration of the modules
+    this.forEach = function(f) {
+        mods.forEach(f);
+    };
+    this.map = function(f) {
+        return mods.map(f);
+    };
+    
+    // Get the stats
+    this.stats = function() {
+        var maxHealth = me.hull ? me.hull.maxHealth : 0;
+        var stats = {maxHealth: maxHealth, range: 0, speed: 0, attack: 0};
+        // NOTE:
+        // Find a way to unify the following function with the "world" namespace,
+        // so that it will done in only one place
+        mods.forEach(function(mod) {
+            stats.maxHealth += mod.health;
+            stats.range += mod.range;
+            stats.speed += mod.speed;
+            stats.attack += mod.attack;
+        });
+        return stats;
+    };
 };

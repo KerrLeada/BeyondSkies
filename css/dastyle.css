@@ -166,6 +166,11 @@ td.paddedLeft
     padding-left: 20px;
 }
 
+.rightWinged
+{
+    float: right;
+}
+
 .designerFrame
 {
     padding-left: 20px;
@@ -238,7 +243,6 @@ td.paddedLeft
     padding-left: 10px;
     width: 300px;
     height: 400px;
-    float: right;
 }
 
 .catBtn

@@ -1,4 +1,6 @@
-﻿var world = (function() {
+﻿'use strict';
+
+var world = (function() {
     var ns = {};
     
     // Creates cost
@@ -152,7 +154,6 @@
         this.get = core.bind(me._all, me._all.get);
         this.map = core.bind(me._all, me._all.map);
     };
-    */
 
     // Adds the given array of modules to the given target array
     function addAllMods(all, target, toAdd) {
@@ -177,38 +178,100 @@
         this.sensors = core.getter(this._sensors);
         this.weapons = core.getter(this._weapons);
         this.other = core.getter(this._other);
-        this.all = core.bind(this._all, this._all.values);
+        var me = this;
+        this.all = function() {
+//            console.log(me._all.values());
+            return me._all.values();
+        };//core.bind(this._all, this._all.values);
 
         // Access and iteration of the modules
         this.get = core.bind(this._all, this._all.get);
         this.map = core.bind(this._all, this._all.map);
         this.forEach = core.bind(this._all, this._all.forEach);
     };
+    */
 
     // A module manager for a ship
-    ns.ShipModuleManager = core.newCtor(BaseModuleManager, function(hull, mods) {
-        this._super();
-
-        // Add the modules
-        addAllMods(this._all, this._engines, mods.engines);
-        addAllMods(this._all, this._sensors, mods.sensors);
-        addAllMods(this._all, this._weapons, mods.weapons);
-        addAllMods(this._all, this._other, mods.other);
-
+    ns.ShipModuleManager = function(hull, mods) {
+        var me = this;
+        
+        // Module lists
+        function getMods(src) {
+            return src ? src.slice() : [];
+        }
+        var engines = getMods(mods.engines);
+        var sensors = getMods(mods.sensors);
+        var weapons = getMods(mods.weapons);
+        var other = getMods(mods.other);
+        var all = engines.concat(sensors, weapons, other);
+        
+        //
+        var stats = {maxHealth: hull.maxHealth, speed: 0, range: 0, attack: 0};
+        var flags = ModuleFlags.NONE;
+        all.forEach(function(mod) {
+            stats.maxHealth += mod.maxHealth;
+            stats.speed += mod.speed;
+            stats.range += mod.range;
+            stats.attack += mod.attack;
+        });
+        
+        this.stats = function() {
+        };
+        
         // Get the hull
         this.hull = function() {
             return hull;
         };
+        
+        // Getters
+        this.engines = core.arrGetter(engines);
+        this.sensors = core.arrGetter(sensors);
+        this.weapons = core.arrGetter(weapons);
+        this.other = core.arrGetter(other);
+        this.all = core.arrGetter(all);
+        
+        // Methods for adding a module
+        function addMod(cat, mod) {
+            cat.push(mod);
+            all.push(mod);
+        }
+        this.addEngine = function(mod) {
+            addMod(engines, mod);
+        };
+        this.addSensor = function(mod) {
+            addMod(sensors, mod);
+        };
+        this.addWeapon = function(mod) {
+            addMod(weapons, mod);
+        };
+        this.addOther = function(mod) {
+            addMod(other, mod);
+        };
+        
+        // Adds the modules in the list of modules
+        this.addModules = function(mods) {
+            mods.forEach(function(mod) {
+                ns.registerModule(me, mod);
+            });
+        };
 
         // Creates a copy of the ship module manager
         this.copy = function() {
-            return new ns.ShipModuleManager(hull, mods);
+            return new ns.ShipModuleManager(hull, {
+                engines: engines,
+                sensors: sensors,
+                weapons: weapons,
+                other: other
+            });
         };
-    });
+
+        // Iteration
+        this.forEach = core.bind(all, all.forEach);
+        this.map = core.bind(all, all.map);
+    };
 
     // A module manager for a civilization
-    ns.CivModuleManager = core.newCtor(BaseModuleManager, function() {
-        this._super();
+    ns.CivModuleManager = function() {
         var me = this;
         this._hulls = new core.Hashtable();
 
@@ -216,18 +279,66 @@
         [ns.Hull.COLONY_HULL, ns.Hull.SMALL_HULL, ns.Hull.MEDIUM_HULL, ns.Hull.LARGE_HULL].forEach(function(hull) {
             me._hulls.add(hull.uid, hull);
         });
+        
+        this._engines = new core.Hashtable();
+        this._sensors = new core.Hashtable();
+        this._weapons = new core.Hashtable();
+        this._other = new core.Hashtable();
+        this._all = new core.Hashtable();
+        
+        // Returns the hulls
+        this.hulls = core.getter(this._hulls);
+
+        // Getters for the modules
+        this.engines = core.getter(this._engines);
+        this.sensors = core.getter(this._sensors);
+        this.weapons = core.getter(this._weapons);
+        this.other = core.getter(this._other);
+        this.all = core.getter(this._all);
+
+        // Adds the given array of modules to the given target array
+        function addAllMods(target, toAdd) {
+            if (toAdd) {
+                toAdd.forEach(function(mod) {
+                    target.add(mod.uid, mod);
+                    me._all.add(mod.uid, mod);
+                });
+            }
+        }
 
         // Adds the modules in the given module object to the module manager
         this.addModules = function(mods) {
-            addAllMods(me._all, me._engines, mods.engines);
-            addAllMods(me._all, me._sensors, mods.sensors);
-            addAllMods(me._all, me._weapons, mods.weapons);
-            addAllMods(me._all, me._other, mods.other);
+            addAllMods(me._engines, mods.engines);
+            addAllMods(me._sensors, mods.sensors);
+            addAllMods(me._weapons, mods.weapons);
+            addAllMods(me._other, mods.other);
         };
 
-        // Returns the hulls
-        this.hulls = core.getter(this._hulls);
-    });
+        // Access and iteration of the modules
+        this.get = core.bind(this._all, this._all.get);
+        this.forEach = core.bind(this._all, this._all.forEach);
+        this.map = core.bind(this._all, this._all.map);
+    };
+    
+    // Used to register modules, depending on their flag
+    ns.registerModule = (function() {
+        var dispatch = {};
+        dispatch[ModuleFlags.ENGINE] = function(target, mod) {
+            target.addEngine(mod);
+        };
+        dispatch[ModuleFlags.SENSOR] = function(target, mod) {
+            target.addSensor(mod);
+        };
+        dispatch[ModuleFlags.WEAPON] = function(target, mod) {
+            target.addWeapon(mod);
+        };
+        dispatch[ModuleFlags.OTHER] = function(target, mod) {
+            target.addOther(mod);
+        };
+        return function(target, mod) {
+            dispatch[mod.flag](target, mod);
+        };
+    }());
     
     // Represents a fleet
     // Fleets are used to group ships and travel in deep space
