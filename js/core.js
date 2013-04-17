@@ -76,6 +76,13 @@ var core = (function() {
         };
     };
 
+    // Makes sure obj isnt a falsy-value, and throws an exception with the given error message if it is
+    ns.guard = function(obj, errMsg) {
+        if (!obj) {
+            throw new TypeError(errMsg);
+        }
+    };
+
     // Makes sure something is not undefined
     function defined(val, errMsg) {
         if (val === undefined) {
@@ -224,6 +231,18 @@ var core = (function() {
             results.push(f(value, key));
         });
         return results;
+    };
+
+    // Returns an array of the elements that was accepted by the given predicate
+    MyHashtable.prototype.filter = function(pred) {
+        validateFunction(pred);
+        var result = [];
+        this.forEach(function(value, key) {
+            if (pred(value, key)) {
+                results.push(value);
+            }
+        });
+        return result;
     };
     
     // Returns the values

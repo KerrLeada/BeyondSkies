@@ -72,7 +72,7 @@ ui.DesignerView = function(player, parent) {
         var mstats = div('designerModStats');
         var leftPanel = div('designerModPanel').append(categories(mstats));
         var saveBtn = button('btn').html('Save').click(function() {
-            if (model.exists) {
+            if (model.exists()) {
                 if (confirm('Are you sure you want to modify this spec?')) {
                     model.selectNone();
                     parent.empty();
@@ -110,13 +110,15 @@ ui.DesignerView = function(player, parent) {
         var rangeDiv = div();
         var speedDiv = div();
         var attackDiv = div();
-        var selectedEffects = div('designerShipStats').append(div().html('Ship Stats'), [healthDiv, rangeDiv, speedDiv, attackDiv]);
+        var spaceDiv = div();
+        var selectedEffects = div('designerShipStats').append(div().html('Ship Stats'), [healthDiv, rangeDiv, speedDiv, attackDiv, spaceDiv]);
         return function() {
             var stats = model.stats();
             healthDiv.html('Health: ' + stats.maxHealth);
             rangeDiv.html('Range: ' + stats.range);
             speedDiv.html('Speed: ' + stats.speed);
             attackDiv.html('Attack: ' + stats.attack);
+            spaceDiv.html('Space: ' + stats.spaceTaken + ' / ' + model.hullSize());
             return selectedEffects;
         };
     }());
@@ -149,7 +151,7 @@ ui.DesignerView = function(player, parent) {
         
         // Create the options array and get the selected hull (and make it appear selected :P)
         var ops = [];
-        var selected = model.hull;
+        var selected = model.hull();
         if (!selected) {
             var defaultOpt = option('---').attr('disabled', true).attr('selected', true);
             ops.push(defaultOpt);
@@ -223,7 +225,9 @@ ui.DesignerView = function(player, parent) {
             var stsBtn = button(['txtbtn', 'wide']).html(mod.name).click(showMod(mod));
             var addBtn = button('btn').html('Add');
             addBtn.click(function() {
-                model.add(mod);
+                if (!model.add(mod)) {
+                    alert('Could not add module');
+                }
             });
             parent.append(table('designerHead').append(
                 tr().append(
@@ -261,14 +265,14 @@ ui.DesignerView = function(player, parent) {
     function showSpecMods() {
         selectedMods.empty().append(
             'Ship Modules',
-            model.map(function(mod, key) {
+            model.map(function(curr, modId) {
                 // Create the removal button
                 var removeBtn = button('btn').html('Remove');
                 removeBtn.click(function() {
-                    model.remove(key);
+                    model.remove(modId);
                 });
                 return div().append(
-                    mod.name,
+                    curr.count + ' x ' + curr.mod.name,
                     removeBtn
                 );
             })
@@ -279,46 +283,66 @@ ui.DesignerView = function(player, parent) {
 
 ui._DesignerViewModel = function() {
     var me = this;
-    var mods = [];
-    this.exists = false;
-    this.hull = null;
+    var mods = null;
+    var exists = false;
     this.name = '';
     this.onChange = function() {};
+    this._mods = null; // For debugging reasons... to be removed later
 
     // Setup everything
     function setup(name, hull, modules) {
         me.name = name;
-        me.hull = hull;
-        mods = modules;
+        mods = new world.ModuleManager(hull, modules);
+        me._mods = mods; // For debugging reasons... to be removed later
     }
+
+    // Checks if the model was based on an existing spec
+    this.exists = function() {
+        return exists;
+    };
 
     // Selects a spec
     this.select = function(spec) {
         if (spec) {
-            setup(spec.name, spec.hull, spec.modules().all());
-            me.exists = true;
+            setup(spec.name, spec.hull, spec.modules());
+            exists = true;
         }
         else {
             me.selectNone();
         }
     };
+
+    this.spaceTaken = function() {
+        return mods ? mods.spaceTaken() : 0;
+    };
+    this.hullSize = function() {
+        return mods ? mods.hullSize() : 0;
+    };
     
+    // Selects nothing
     this.selectNone = function() {
         setup('', null, []);
-        me.exists = false;
+        exists = false;
     };
 
     // Adds a module
     this.add = function(mod) {
-        mods.push(mod);
-        me.onChange();
+        var wasAdded = mods.add(mod);
+        if (wasAdded) {
+            me.onChange();
+        }
+        return wasAdded;
     };
 
     // Removes the module with the given key
-    this.remove = function(key) {
-        var removed = mods[key];
-        mods.splice(key, 1);
+    this.remove = function(modId) {
+        mods.remove(modId);
         me.onChange();
+    };
+
+    // Gets or sets the hull
+    this.hull = function(hull) {
+        return mods.hull(hull);
     };
 
     // Iteration of the modules
@@ -328,20 +352,12 @@ ui._DesignerViewModel = function() {
     this.map = function(f) {
         return mods.map(f);
     };
+    this.filter = function(pred) {
+        return mods.filter(pred);
+    };
     
     // Get the stats
     this.stats = function() {
-        var maxHealth = me.hull ? me.hull.maxHealth : 0;
-        var stats = {maxHealth: maxHealth, range: 0, speed: 0, attack: 0};
-        // NOTE:
-        // Find a way to unify the following function with the "world" namespace,
-        // so that it will done in only one place
-        mods.forEach(function(mod) {
-            stats.maxHealth += mod.health;
-            stats.range += mod.range;
-            stats.speed += mod.speed;
-            stats.attack += mod.attack;
-        });
-        return stats;
+        return mods.stats();
     };
 };
