@@ -40,47 +40,52 @@ ui.DesignerView = function(player, parent) {
 
     // Creates the overview
     function overview(designer) {
-        return div('designerHead').append(
+        var specList = span();
+        function updateSpecList() {
+            return specList.empty().append(player.specs.map(function(spec) {
+                return specBtn(designer, spec);
+            }));
+        }
+        function specBtn(designer, spec) {
+            return button('btn').append(spec.name).click(function() {
+                model.select(spec);
+                specDesigner(designer, updateSpecList);
+            });
+        }
+        var overv = div('designerHead').append(
             div(['infoTitle', 'wide']).html('Specs'),
             div('designerOptions').append(
                 span().append(
                     button('btn').html('New spec').click(function() {
                         model.selectNone();
-                        specDesigner(designer);
+                        specDesigner(designer, updateSpecList);
                     }),
                     span('righted').html('Existing: ')
                 ),
-                span().append(player.specs.map(function(spec) {
-                    return specBtn(designer, spec);
-                }))
+                updateSpecList()
             )
         );
-    }
-
-    // Creates a spec button
-    function specBtn(designer, spec) {
-        var btn = button('btn').append(spec.name);
-        btn.click(function() {
-            model.select(spec);
-            specDesigner(designer);
-        });
-        return btn;
+        return overv;
     }
 
     // Creates the designer
-    function specDesigner(parent) {
+    function specDesigner(parent, updater) {
         var mstats = div('designerModStats');
         var leftPanel = div('designerModPanel').append(categories(mstats));
         var saveBtn = button('btn').html('Save').click(function() {
             if (model.exists()) {
                 if (confirm('Are you sure you want to modify this spec?')) {
+                    player.specs.updateSpec(model.name, model.modules());
                     model.selectNone();
                     parent.empty();
+                    updater();
                 }
             }
             else {
+                player.specs.addSpec(model.name, model.hull(), model.modules());
                 model.selectNone();
                 parent.empty();
+                updater();
             }
         });
         var cancelBtn = button('btn').html('Cancel').click(function() {
@@ -138,6 +143,9 @@ ui.DesignerView = function(player, parent) {
     // Creates the place the player can give the spec a name
     function inputName() {
         var inpName = input().attr('value', model.name);
+        inpName.change(function() {
+            model.name = $(this).attr('value');
+        });
         return div(['designerOptions', 'designerHead']).append('Name: ', inpName);
     }
 
@@ -173,8 +181,8 @@ ui.DesignerView = function(player, parent) {
         // Make so the hull information updates when an option is selected
         var sel = select(ops).change(function() {
             var curr = $(this).attr('value');
-            model.hull = modules.hulls(curr)
-            updateInfo(model.hull);
+            model.hull(modules.hulls(curr));
+            updateInfo(model.hull());
             showSpecStats();
         });
 
@@ -311,18 +319,22 @@ ui._DesignerViewModel = function() {
             me.selectNone();
         }
     };
+    
+    // Selects nothing
+    this.selectNone = function() {
+        setup('', null, []);
+        exists = false;
+    };
+
+    this.modules = function() {
+        return mods;
+    };
 
     this.spaceTaken = function() {
         return mods ? mods.spaceTaken() : 0;
     };
     this.hullSize = function() {
         return mods ? mods.hullSize() : 0;
-    };
-    
-    // Selects nothing
-    this.selectNone = function() {
-        setup('', null, []);
-        exists = false;
     };
 
     // Adds a module

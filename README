@@ -3,4 +3,4 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-More bug fixes. ModuleManager now also takes a different kind of object when modules are added directly to it during construction. More specifically, it takes any object that implements a "forEach" method.
+Have gotten the ship designer to kind of work. Still a lot of rough edges to improve upon.

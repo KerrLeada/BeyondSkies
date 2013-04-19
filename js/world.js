@@ -360,36 +360,33 @@ var world = (function() {
     // A ship specification, used to create new ships
     ns.ShipSpec = function(civ, name, hull, modules) {
         var me = this;
+        var stats = null;
         this.civ = civ;
         this.name = name;
         this.hull = hull;
 
         // Set the modules
-        this._modules = new ns.ModuleManager(hull, modules);
         this.modules = function() {
             return me._modules;
         };
         this.copyModules = function() {
             return me._modules.copy();
         };
+        this.updateModules = function(mods) {
+            me._modules = new ns.ModuleManager(hull, mods);
+            stats = me._modules.stats();
+            me._stats = stats;
+            if (stats.spaceTaken > hull.size) {
+                throw 'Cannot fit this much in this hull';
+            }
+        };
+        this.updateModules(modules);
         
-        // Set the specs base stats
-        var stats = this._modules.stats();
-        if (stats.spaceTaken > hull.size) {
-            throw 'Cannot fit this much in this hull';
-        }
-
-        this._stats = stats;
         this._flags = ModuleFlags.NONE;
-        this._cost = hull.cost;
-        this._size = 0;
-        if (me._size > hull.size) {
-            throw 'Cannot fit this much in this hull';
-        }
 
         // Returns the stats of the ships constructed with this spec
         this.stats = function() {
-            return core.copy(me._stats);
+            return core.copy(stats);
         };
         
         // Returns the flags
@@ -399,13 +396,12 @@ var world = (function() {
 
         // Returns how much it costs to build a ship from this spec
         me.cost = function() {
-            return me._cost;
+            return core.copy(stats.cost);
         };
 
         // Returns how much space has been taken
-        me.size = function() {
-            return me._size;
-        }
+        me.h_size = core.bind(me._modules, me._modules.hullSize);
+        me.spaceTaken = core.bind(me._modules, me._modules.spaceTaken);
         
         // Creates a new ship from the ship spec
         // Accepts the ship name and the owner of the ship
@@ -424,7 +420,17 @@ var world = (function() {
         this.addSpec = function(name, hull, modules) {
             if (!specs.has(name)) {
                 modules = modules || [];
-                specs.set(name, new ns.ShipSpec(civ, name, hull, modules));
+                specs.add(name, new ns.ShipSpec(civ, name, hull, modules));
+                return true;
+            }
+            return false;
+        };
+
+        // Updates the spec with the given name with the given modules
+        this.updateSpec = function(name, modules) {
+            var spec = specs.tryGet(name);
+            if (spec) {
+                spec.updateModules(modules);
                 return true;
             }
             return false;
