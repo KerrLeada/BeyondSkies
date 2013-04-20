@@ -145,6 +145,9 @@ var world = (function() {
         // Gets or sets the hull
         this.hull = function(newHull) {
             if (newHull) {
+                if (hull) {
+                    throw 'Hull already set';
+                }
                 hull = newHull;
                 hullSize = hull.size;
                 return;
@@ -416,9 +419,15 @@ var world = (function() {
         var specs = new core.Hashtable();
         this._specs = specs;
 
+        // Checks if the name is an invalid spec name
+        function isInvalid(name) {
+            return name === ''
+        }
+
         // Adds a spec
         this.addSpec = function(name, hull, modules) {
-            if (!specs.has(name)) {
+            name = $.trim(name);
+            if (! (specs.has(name) || isInvalid(name))) {
                 modules = modules || [];
                 specs.add(name, new ns.ShipSpec(civ, name, hull, modules));
                 return true;
@@ -434,6 +443,11 @@ var world = (function() {
                 return true;
             }
             return false;
+        };
+
+        // Removes the spec with the given name
+        this.removeSpec = function(name) {
+            specs.remove(name);
         };
         
         this.forEach = core.bind(specs, specs.forEach);
@@ -494,6 +508,7 @@ var world = (function() {
         
         this.maxHealth = function() {
             return stats.maxHealth;
+
         };
 
         this.health = function() {

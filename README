@@ -3,4 +3,4 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Have gotten the ship designer to kind of work. Still a lot of rough edges to improve upon.
+Bug fixes and a few updates to the spec designer ui. There are still a couple of bugs that need to be sorted out. For example, its only possible to select the hull once atm.

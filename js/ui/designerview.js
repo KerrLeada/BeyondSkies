@@ -72,40 +72,54 @@ ui.DesignerView = function(player, parent) {
     function specDesigner(parent, updater) {
         var mstats = div('designerModStats');
         var leftPanel = div('designerModPanel').append(categories(mstats));
+        var rightPanel = div('rightWinged').append(showSpecStats());
+        function clear() {
+            model.selectNone();
+            parent.empty();
+            updater();
+        }
+
+        // Saves the current spec
         var saveBtn = button('btn').html('Save').click(function() {
             if (model.exists()) {
                 if (confirm('Are you sure you want to modify this spec?')) {
-                    player.specs.updateSpec(model.name, model.modules());
-                    model.selectNone();
-                    parent.empty();
-                    updater();
+                    player.specs.updateSpec(model.name(), model.modules());
+                    clear()
                 }
             }
             else {
-                player.specs.addSpec(model.name, model.hull(), model.modules());
-                model.selectNone();
-                parent.empty();
-                updater();
+                player.specs.addSpec(model.name(), model.hull(), model.modules());
+                clear();
             }
         });
+
+        // Cancels whatever has been done
         var cancelBtn = button('btn').html('Cancel').click(function() {
             if (confirm('Are you sure you want to cancel?')) {
                 model.selectNone();
                 parent.empty();
             }
         });
+
+        // Add the buttons to rightPanel
+        rightPanel.append(saveBtn, cancelBtn);
+        if (model.exists()) {
+            // If a spec is edited rather then created, add a button to delete it
+            var deleteBtn = button('btn').html('Delete').click(function() {
+                if (confirm('Are you sure you want to delete this spec?')) {
+                    player.specs.removeSpec(model.name());
+                    clear();
+                }
+            });
+            rightPanel.append(deleteBtn);
+        }
+
         parent.empty().append(
             div('designerLeftNStats').append(
                 div('designerLeftPanel').append(leftPanel, mstats),
-                [
-                    specData(),
-                    showSpecMods()
-                ]
+                [specNameNHull(), showSpecMods()]
             ),
-            div('rightWinged').append(
-                showSpecStats(),
-                [saveBtn, cancelBtn]
-            )
+            rightPanel
         );
     }
     
@@ -129,23 +143,24 @@ ui.DesignerView = function(player, parent) {
     }());
 
     // Creates the ship data viewing thingy
-    function specData() {
+    function specNameNHull() {
         var hullStats = div('designerHead');
-        return div('designerNameNHull').empty().append(
-            inputName(),
-            [
-                hullSelection(hullStats),
-                hullStats
-            ]
-        );
+        var nameNHull = div('designerNameNHull').append();
+        return nameNHull.append(inputName(), hullSelection(hullStats), hullStats);
     }
 
     // Creates the place the player can give the spec a name
     function inputName() {
-        var inpName = input().attr('value', model.name);
-        inpName.change(function() {
-            model.name = $(this).attr('value');
-        });
+        var inpName = null;
+        if (!model.exists()) {
+            inpName = input().attr('value', model.name());
+            inpName.change(function() {
+                model.name($(this).attr('value'));
+            });
+        }
+        else {
+            inpName = span().html(model.name());
+        }
         return div(['designerOptions', 'designerHead']).append('Name: ', inpName);
     }
 
@@ -158,33 +173,36 @@ ui.DesignerView = function(player, parent) {
         }
         
         // Create the options array and get the selected hull (and make it appear selected :P)
-        var ops = [];
         var selected = model.hull();
+        var sel = select();
+
+        // If no hull was selected, make sure one can be selected
         if (!selected) {
             var defaultOpt = option('---').attr('disabled', true).attr('selected', true);
-            ops.push(defaultOpt);
+            sel.append(defaultOpt);
+     
+           // Display all the options, and select the right one
+            modules.hulls().forEach(function(curr) {
+                var op = option(curr.name);
+                op.attr('value', curr.uid);
+                sel.append(op);
+            });
+
+            // Make so the hull information updates when an option is selected
+            sel.change(function() {
+                var curr = $(this).attr('value');
+                model.hull(modules.hulls(curr));
+                updateInfo(model.hull());
+                showSpecStats();
+            });
         }
         else {
+            // If a hull was selected, make sure it cant be changed
+            var selectedHull = option(selected.name);
+            sel.append(selectedHull);
             updateInfo(selected);
-        }
-
-        // Display all the options, and select the right one
-        modules.hulls().forEach(function(curr) {
-            var op = option(curr.name);
-            op.attr('value', curr.uid);
-            if (curr === selected) {
-                op.attr('selected', true);
-            }
-            ops.push(op);
-        });
-
-        // Make so the hull information updates when an option is selected
-        var sel = select(ops).change(function() {
-            var curr = $(this).attr('value');
-            model.hull(modules.hulls(curr));
-            updateInfo(model.hull());
             showSpecStats();
-        });
+        }
 
         // Return the selection thing in a div
         return div('designerHead').append('Hulls: ', sel);
@@ -292,17 +310,26 @@ ui.DesignerView = function(player, parent) {
 ui._DesignerViewModel = function() {
     var me = this;
     var mods = null;
+    var specName = '';
     var exists = false;
-    this.name = '';
     this.onChange = function() {};
     this._mods = null; // For debugging reasons... to be removed later
 
     // Setup everything
     function setup(name, hull, modules) {
-        me.name = name;
+        specName = name;
         mods = new world.ModuleManager(hull, modules);
         me._mods = mods; // For debugging reasons... to be removed later
     }
+
+    // Gets or sets the name
+    this.name = function(name) {
+        if (name) {
+            specName = name;
+            return;
+        }
+        return specName;
+    };
 
     // Checks if the model was based on an existing spec
     this.exists = function() {

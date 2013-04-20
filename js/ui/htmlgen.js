@@ -67,9 +67,11 @@ ui.html = (function() {
     // Creates a select element with the given options
     ns.select = function(options, clazz) {
         var e = htmlElem('<select>', clazz);
-        options.forEach(function(op) {
-            e.append(op);
-        });
+        if (options) {
+            options.forEach(function(op) {
+                e.append(op);
+            });
+        }
         return e;
     };
 
