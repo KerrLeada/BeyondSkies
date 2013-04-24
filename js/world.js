@@ -109,16 +109,14 @@ var world = (function() {
     });
 
     // Handles modules
-    ns.ModuleManager = function(hull, mods) {
+    ns.ModuleManager = function(hullSize, mods) {
         var me = this;
         var modules = new core.Hashtable();
         var spaceTaken = 0;
-        var hullSize = hull ? hull.size : 0;
 
         // Calculates the stats        
         this.stats = function() {
-            var hull = hull ? hull : {maxHealth: 0, cost: mkcost(0, 0)};
-            var stats = {maxHealth: hull.maxHealth, range: 0, speed: 0, attack: 0, flags: ModuleFlags.NONE, cost: hull.cost, spaceTaken: spaceTaken};
+            var stats = {maxHealth: 0, range: 0, speed: 0, attack: 0, flags: ModuleFlags.NONE, cost: mkcost(0, 0), spaceTaken: spaceTaken};
             modules.forEach(function(curr) {
                 var mod = curr.mod;
                 var count = curr.count;
@@ -137,25 +135,7 @@ var world = (function() {
             return spaceTaken;
         };
 
-        // Returns how much can be put in the hull
-        this.hullSize = function() {
-            return hullSize;
-        };
-        
-        // Gets or sets the hull
-        this.hull = function(newHull) {
-            if (newHull) {
-                if (hull) {
-                    throw 'Hull already set';
-                }
-                hull = newHull;
-                hullSize = hull.size;
-                return;
-            }
-            return hull;
-        };
-        
-        // Getters
+        // Creates getters for the view
         function getter(expected) {
             return function() {
                 return modules.filter(function(mod) {
@@ -163,12 +143,25 @@ var world = (function() {
                 });
             };
         }
-        this.engines = getter(ModuleFlags.ENGINE);
-        this.sensors = getter(ModuleFlags.SENSOR);
-        this.weapons = getter(ModuleFlags.WEAPON);
-        this.other = getter(ModuleFlags.COLONY);
-        this.all = core.bind(modules, modules.values);
-        
+
+        // Create the view object and seal it
+        var view = {
+            engines: getter(ModuleFlags.ENGINE),
+            sensors: getter(ModuleFlags.SENSOR),
+            weapons: getter(ModuleFlags.WEAPON),
+            other: getter(ModuleFlags.COLONY),
+            all: core.bind(modules, modules.values),
+            map: core.bind(modules, modules.map),
+            filter: core.bind(modules, modules.filter),
+            forEach: core.bind(modules, modules.forEach)
+        }
+        Object.seal(view);
+
+        // Returns the view object
+        this.view = function() {
+            return view;
+        };
+
         // Adds the given module in the list of modules, if it fits
         // Returns true if the module was added and false otherwise
         this.add = function(mod) {
@@ -198,29 +191,29 @@ var world = (function() {
 
         // Creates a copy of the ship module manager
         this.copy = function() {
-            return new ns.ModuleManager(hull, me);
+            return new ns.ModuleManager(hullSize, me);
         };
 
-        // Iterates through the modules
-        this.forEach = function(f) {
-            modules.forEach(function(curr, modId) {
-                f(curr.mod, modId);
-            });
-        };
-
-        // Basic iteration
-        // NOTE TO SELF: MAKE THIS SAFE FROM MODIFICATION
-        this.iter = core.bind(modules, modules.forEach);
-        this.map = core.bind(modules, modules.map);
-        this.filter = core.bind(modules, modules.filter);
-
-        // If modules where provided, add them
+        // Check if there where modules to add
         if (mods) {
-            mods.forEach(function(mod) {
-                if (!me.add(mod)) {
-                    throw 'Full';
+            // Either, the modules are provided with another module manager...
+            if (mods instanceof ns.ModuleManager) {
+                if (hullSize < mods.spaceTaken()) {
+                    throw 'Very Full';
                 }
-            });
+                mods.view().forEach(function(curr, uid) {
+                    modules.add(uid, core.copy(curr));
+                    spaceTaken += curr.mod.size;
+                });
+            }
+            else {
+                // ... or with any object that has a forEach method that loops over the modules
+                mods.forEach(function(mod) {
+                    if (!me.add(mod)) {
+                        throw 'Full';
+                    }
+                });
+            }
         }
     };
 
@@ -370,13 +363,13 @@ var world = (function() {
 
         // Set the modules
         this.modules = function() {
-            return me._modules;
+            return me._modules.view();
         };
         this.copyModules = function() {
             return me._modules.copy();
         };
         this.updateModules = function(mods) {
-            me._modules = new ns.ModuleManager(hull, mods);
+            me._modules = new ns.ModuleManager(hull.size, mods);
             stats = me._modules.stats();
             me._stats = stats;
             if (stats.spaceTaken > hull.size) {
@@ -734,15 +727,17 @@ var world = (function() {
         this.cost = 0;
         this._queue = [];
         
+
         // Builds something
         this.build = function(spec) {
-            var eta = calcEta(spec.cost.production) + lastEta();
-            var turnCost = (me._queue.length === 0) ? spec.cost.money / eta : 0;
+            var specCost = spec.cost();
+            var eta = calcEta(specCost.production) + lastEta();
+            var turnCost = (me._queue.length === 0) ? specCost.money / eta : 0;
             me._queue.push({
                 progress: 0,
                 expenses: 0,
                 turnCost: turnCost,
-                cost: spec.cost(),
+                cost: specCost,
                 spec: spec,
                 eta: eta
             });

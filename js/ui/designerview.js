@@ -21,7 +21,7 @@ ui.DesignerView = function(player, parent) {
 
     // The modules known by the player
     var modules = player.modules;
-    var model = new ui._DesignerViewModel();
+    var model = new ui._DesignerViewModel(player.specs);
     model.onChange = function() {
         showSpecMods();
         showSpecStats();
@@ -79,41 +79,50 @@ ui.DesignerView = function(player, parent) {
             updater();
         }
 
-        // Saves the current spec
-        var saveBtn = button('btn').html('Save').click(function() {
-            if (model.exists()) {
-                if (confirm('Are you sure you want to modify this spec?')) {
-                    player.specs.updateSpec(model.name(), model.modules());
-                    clear()
-                }
-            }
-            else {
-                player.specs.addSpec(model.name(), model.hull(), model.modules());
-                clear();
-            }
-        });
+        // Create the buttons
+        var saveBtn = button('btn');
+        var cancelBtn = button('btn').html('Cancel');
+        var removeBtn = button('btn').html('Remove');
 
-        // Cancels whatever has been done
-        var cancelBtn = button('btn').html('Cancel').click(function() {
+        // Check if the model is editing a spec or not
+        if (model.editing()) {
+            // Make the save button save the update
+            saveBtn.html('Save update');
+            saveBtn.click(function() {
+                if (confirm('Are you sure you want to modify this spec?')) {
+                    model.updateSpec();
+                    clear();
+                }
+            });
+
+            // Make so the remove button removes the spec
+            removeBtn.click(function() {
+                if (confirm('Are you sure you want to permanently remove this spec?')) {
+                    model.removeSpec();
+                    clear();
+                }
+            });
+        }
+        else {
+            // Make the save button save the new spec design
+            saveBtn.html('Save design');
+            saveBtn.click(function() {
+                model.saveSpec();
+                clear();
+            });
+
+            // Make the remove button disabled
+            removeBtn.attr('disabled', true);
+        }
+
+        cancelBtn.click(function() {
             if (confirm('Are you sure you want to cancel?')) {
                 model.selectNone();
                 parent.empty();
             }
         });
 
-        // Add the buttons to rightPanel
-        rightPanel.append(saveBtn, cancelBtn);
-        if (model.exists()) {
-            // If a spec is edited rather then created, add a button to delete it
-            var deleteBtn = button('btn').html('Delete').click(function() {
-                if (confirm('Are you sure you want to delete this spec?')) {
-                    player.specs.removeSpec(model.name());
-                    clear();
-                }
-            });
-            rightPanel.append(deleteBtn);
-        }
-
+        rightPanel.append(saveBtn, removeBtn, cancelBtn);
         parent.empty().append(
             div('designerLeftNStats').append(
                 div('designerLeftPanel').append(leftPanel, mstats),
@@ -130,7 +139,8 @@ ui.DesignerView = function(player, parent) {
         var speedDiv = div();
         var attackDiv = div();
         var spaceDiv = div();
-        var selectedEffects = div('designerShipStats').append(div().html('Ship Stats'), [healthDiv, rangeDiv, speedDiv, attackDiv, spaceDiv]);
+        var costDiv = div();
+        var selectedEffects = div('designerShipStats').append(div().html('Ship Stats'), [healthDiv, rangeDiv, speedDiv, attackDiv, spaceDiv, p().append(costDiv)]);
         return function() {
             var stats = model.stats();
             healthDiv.html('Health: ' + stats.maxHealth);
@@ -138,6 +148,7 @@ ui.DesignerView = function(player, parent) {
             speedDiv.html('Speed: ' + stats.speed);
             attackDiv.html('Attack: ' + stats.attack);
             spaceDiv.html('Space: ' + stats.spaceTaken + ' / ' + model.hullSize());
+            costDiv.html('Money: ' + stats.cost.money + ' Production: ' + stats.cost.production);
             return selectedEffects;
         };
     }());
@@ -152,7 +163,7 @@ ui.DesignerView = function(player, parent) {
     // Creates the place the player can give the spec a name
     function inputName() {
         var inpName = null;
-        if (!model.exists()) {
+        if (!model.editing()) {
             inpName = input().attr('value', model.name());
             inpName.change(function() {
                 model.name($(this).attr('value'));
@@ -248,7 +259,8 @@ ui.DesignerView = function(player, parent) {
     function catContent(parent, catMods, showMod) {
         parent.empty();
         catMods.forEach(function(mod) {
-            var stsBtn = button(['txtbtn', 'wide']).html(mod.name).click(showMod(mod));
+            var stsBtn = button(['txtbtn', 'wide']).html(mod.name + ' (size ' + mod.size + ')');
+            stsBtn.click(showMod(mod));
             var addBtn = button('btn').html('Add');
             addBtn.click(function() {
                 if (!model.add(mod)) {
@@ -298,7 +310,7 @@ ui.DesignerView = function(player, parent) {
                     model.remove(modId);
                 });
                 return div().append(
-                    curr.count + ' x ' + curr.mod.name,
+                    curr.count + ' x ' + curr.mod.name + ' (size ' + curr.mod.size + ')',
                     removeBtn
                 );
             })
@@ -307,18 +319,29 @@ ui.DesignerView = function(player, parent) {
     }
 };
 
-ui._DesignerViewModel = function() {
+ui._DesignerViewModel = function(specs) {
     var me = this;
     var mods = null;
+    var specHull = null;
     var specName = '';
-    var exists = false;
+    var hullSize = 0;
+    var spaceTaken = 0;
+    var editing = false;
     this.onChange = function() {};
     this._mods = null; // For debugging reasons... to be removed later
 
     // Setup everything
     function setup(name, hull, modules) {
         specName = name;
-        mods = new world.ModuleManager(hull, modules);
+        specHull = hull;
+        hullSize = hull ? hull.size : 0;
+        if (modules.copyModules) {
+            mods = modules.copyModules();
+        }
+        else {
+            mods = new world.ModuleManager(hullSize, modules);
+        }
+        spaceTaken = mods.spaceTaken();
         me._mods = mods; // For debugging reasons... to be removed later
     }
 
@@ -332,36 +355,30 @@ ui._DesignerViewModel = function() {
     };
 
     // Checks if the model was based on an existing spec
-    this.exists = function() {
-        return exists;
+    this.editing = function() {
+        return editing;
     };
 
     // Selects a spec
     this.select = function(spec) {
-        if (spec) {
-            setup(spec.name, spec.hull, spec.modules());
-            exists = true;
-        }
-        else {
-            me.selectNone();
-        }
+        setup(spec.name, spec.hull, spec);
+        editing = true;
     };
     
     // Selects nothing
     this.selectNone = function() {
         setup('', null, []);
-        exists = false;
+        editing = false;
     };
 
     this.modules = function() {
-        return mods;
+        return mods.view();
     };
-
     this.spaceTaken = function() {
-        return mods ? mods.spaceTaken() : 0;
+        return spaceTaken;
     };
     this.hullSize = function() {
-        return mods ? mods.hullSize() : 0;
+        return hullSize;
     };
 
     // Adds a module
@@ -369,6 +386,7 @@ ui._DesignerViewModel = function() {
         var wasAdded = mods.add(mod);
         if (wasAdded) {
             me.onChange();
+            spaceTaken = mods.spaceTaken();
         }
         return wasAdded;
     };
@@ -376,27 +394,50 @@ ui._DesignerViewModel = function() {
     // Removes the module with the given key
     this.remove = function(modId) {
         mods.remove(modId);
+        spaceTaken = mods.spaceTaken();
         me.onChange();
     };
 
     // Gets or sets the hull
     this.hull = function(hull) {
-        return mods.hull(hull);
+        if (hull) {
+            setup(specName, hull, mods);
+            return;
+        }
+        return specHull;
     };
 
     // Iteration of the modules
     this.forEach = function(f) {
-        mods.forEach(f);
+        mods.view().forEach(f);
     };
     this.map = function(f) {
-        return mods.map(f);
+        return mods.view().map(f);
     };
     this.filter = function(pred) {
-        return mods.filter(pred);
+        return mods.view().filter(pred);
     };
     
     // Get the stats
     this.stats = function() {
         return mods.stats();
+    };
+
+    // Saves the spec design
+    this.saveSpec = function() {
+        specs.addSpec(specName, specHull, mods);
+        me.selectNone();
+    };
+
+    // Updates a spec design
+    this.updateSpec = function() {
+        specs.updateSpec(specName, mods);
+        me.selectNone();
+    };
+
+    // Removes the spec design
+    this.removeSpec = function() {
+        specs.removeSpec(specName);
+        me.selectNone();
     };
 };
