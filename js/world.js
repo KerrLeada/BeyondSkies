@@ -266,27 +266,7 @@ var world = (function() {
         this.forEach = core.bind(this._all, this._all.forEach);
         this.map = core.bind(this._all, this._all.map);
     };
-    
-    // Used to register modules, depending on their flag
-    ns.registerModule = (function() {
-        var dispatch = {};
-        dispatch[ModuleFlags.ENGINE] = function(target, mod) {
-            target.addEngine(mod);
-        };
-        dispatch[ModuleFlags.SENSOR] = function(target, mod) {
-            target.addSensor(mod);
-        };
-        dispatch[ModuleFlags.WEAPON] = function(target, mod) {
-            target.addWeapon(mod);
-        };
-        dispatch[ModuleFlags.OTHER] = function(target, mod) {
-            target.addOther(mod);
-        };
-        return function(target, mod) {
-            dispatch[mod.flag](target, mod);
-        };
-    }());
-    
+
     // Represents a fleet
     // Fleets are used to group ships and travel in deep space
     // The last argument, ships, is an optional hashtable for
@@ -377,17 +357,10 @@ var world = (function() {
             }
         };
         this.updateModules(modules);
-        
-        this._flags = ModuleFlags.NONE;
 
         // Returns the stats of the ships constructed with this spec
         this.stats = function() {
             return core.copy(stats);
-        };
-        
-        // Returns the flags
-        me.flags = function() {
-            return me._flags;
         };
 
         // Returns how much it costs to build a ship from this spec
@@ -479,29 +452,10 @@ var world = (function() {
         };
         
         // Stats
-        var specStats = spec.stats();
-        var stats = {
-            maxHealth: specStats.maxHealth,
-            health: specStats.maxHealth,
-            attack: specStats.attack,
-            range: specStats.range,
-            speed: specStats.speed,
-            mp: specStats.speed
-        };
-        this._stats = stats;
-        /*
-        this._health = stats.maxHealth;
-        this._maxHealth = stats.maxHealth;
-        this._attack = stats.attack;
-        this._speed = stats.speed;
-        this._range = stats.range;
-        this._mp = stats.speed;
-        */
-        this._flags = spec.flags();
+        var stats = spec.stats();
         
         this.maxHealth = function() {
             return stats.maxHealth;
-
         };
 
         this.health = function() {
@@ -526,7 +480,7 @@ var world = (function() {
 
         // Checks the ship using the given bitmask
         this.check = function(flags) {
-            return (me.flags & flags) === flags;
+            return (stats.flags & flags) === flags;
         };
     };
 
@@ -671,7 +625,7 @@ var world = (function() {
             // Make sure there is a colony ship
             var sys = planet.sys;
             var colship = sys.ships.find(function(s) {
-                return s.civ === civ && s.check(ModuleFlags.COLONY);
+                return s.civ() === civ && s.check(ModuleFlags.COLONY);
             });
             if (colship) {
                 // Remove the colony ship and colonize the planet

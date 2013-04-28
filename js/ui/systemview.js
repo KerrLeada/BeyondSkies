@@ -93,7 +93,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
     function displayPlanets(sys) {
         var count = 0;
         var hasColShip = sys.ships.exists(function(ship) {
-            return ship.civ === player && ship.check(ModuleFlags.COLONY);
+            return ship.civ() === player && ship.check(ModuleFlags.COLONY);
         });
         if (!player.visited(sys)) {
             var result = td().append('System has not been visited')
