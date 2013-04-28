@@ -303,8 +303,8 @@ var world = (function() {
         // Note that this doesnt update the movement points of the
         // fleet
         function updateRangeSpeed() {
-            me.range = me.ships.findBest(ShipUtils.shortestRange).range;
-            me.speed = me.ships.findBest(ShipUtils.slowest).speed;
+            me.range = me.ships.findBest(ShipUtils.shortestRange).range();
+            me.speed = me.ships.findBest(ShipUtils.slowest).speed();
         }
         
         // Set the fleet speed, range and movement points
@@ -338,7 +338,7 @@ var world = (function() {
         // Sends the fleet to the marked destination (returns true if there was a destination, false otherwise)
         this.sendTo = function(sys) {
             var shortest = me.ships.findBest(ShipUtils.shortestRange);
-            if (me.sys.distanceTo(sys) <= shortest.range) {
+            if (me.sys.distanceTo(sys) <= shortest.range()) {
                 var ships = me.ships.values();
                 me.sys.leave(ships);
                 ds.enter(me, sys);

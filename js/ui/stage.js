@@ -53,8 +53,8 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
         }
         else {
             me.starmap.selectRange(selection.reduce(function(prev, curr) {
-                return curr.range < prev.range ? curr : prev;
-            }).range);
+                return curr.range() < prev.range() ? curr : prev;
+            }).range());
             displayStarmap();
         }
     };

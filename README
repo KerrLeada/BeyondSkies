@@ -3,8 +3,4 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-The ship spec designer should work now, but more testing is needed to find possible bugs.
-
-The "ModuleManager" type now lacks iteration methods. Instead, a "view" method has been added to it. This method will return an object used for iteration (forEach, map, filter and so on). This makes it theoretically easier to make sure the "wrong" code doesnt modify the modules, since they will only have access to the new and not the actual module manager. Another change to "ModuleManager" is that it doesnt take a hull in the constructor anymore. Rather, it takes a hull size. The hulls are after all not counted as modules.
-
-Have also worked to making more properties into methods, since that makes it easier to change the implementation of things.
+Fixed the bug that prevented the ships from moving. Also fixed a bug that prevented the starmap from displaying what systems are in range of the selected ships.
