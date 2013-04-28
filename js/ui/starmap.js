@@ -91,6 +91,7 @@ ui.Starmap = function(player, uni, canvas) {
         }
     };
     
+    // Displays the starmap
     this.display = function() {
         me._view.draw(me._selected, me._highlighted, me._range);
     };

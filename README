@@ -3,4 +3,4 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Colonization works again.
+Fixed the button that toggles the starmap grid on or off. Before it would always be enabled, causing en error if clicked while not on the starmap. Unsure of what exactly triggered this error, but I think it was because a redraw is triggered when toggling the grid. Since the canvas was hidden (the canvas.style.display set to 'none') it would cause an error. Now the "Stage" type has a property "onStarmapChange" that is called when the starmap is either shown or hidden. When its shown, the button is enabled, otherwise it is disabled.

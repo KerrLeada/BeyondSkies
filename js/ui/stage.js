@@ -11,6 +11,8 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
     this.active = this.starmap;
     this._hasSelection = false;
 
+    this.onStarmapChange = function() {};
+
     // Make so the starmap reacts to being clicked
     canvas.addEventListener('click', function(e) {
         if (me.starmap.highlighted() && me.shipBar.hasSelected()) {
@@ -61,7 +63,7 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
     
     // Hookup the events to the starmap
     this.starmap.selectionChanged = this.shipBar.update;
-    
+
     // Shows the starmap
     this.viewStarmap = function() {
         if (me.active !== me.starmap) {
@@ -69,6 +71,7 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
             contentView.hide();
             canvas.style.display = 'block';
             me.starmap.display();
+            me.onStarmapChange(true);
         }
     };
     
@@ -102,6 +105,7 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
             if (prev === me.starmap) {
                 canvas.style.display = 'none';
                 contentView.show();
+                me.onStarmapChange(false);
             }
         }
     }
