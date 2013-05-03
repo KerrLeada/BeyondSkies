@@ -2,7 +2,7 @@
 var ui = ui || {};
 
 // Handles the system view
-ui.SystemView = function(player, uni, shipBar, selector, parent) {
+ui.SystemView = function(player, uni, uipipe, selector, parent) {
     var me = this;
     this._selector = selector;
 
@@ -53,7 +53,9 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
             table().addClass('sysview').append(
                 tr().append(
                     td().append(
-                        img().attr('src', 'grfx/' + me._starType[sys.starType])
+                        img().attr('src', 'grfx/' + me._starType[sys.starType]).click(function() {
+                            uipipe.showStar(me._selector());
+                        })
                     ),
                     displayPlanets(sys)
                 )
@@ -148,7 +150,7 @@ ui.SystemView = function(player, uni, shipBar, selector, parent) {
             btn.click(function() {
                 // Colonize the planet and update the system view and ship bar
                 player.colonize(planet);
-                shipBar.update(planet.sys);
+                uipipe.updateShipBar(planet.sys);
                 me.display(player, parent);
                 popInfo.empty().append(populationInfo(player, colony));
             });

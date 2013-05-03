@@ -2,16 +2,24 @@
 var ui = ui || {};
 
 // Handles the "stage", which basically means it 
-ui.Stage = function(player, uni, canvas, contentView, shipView) {
+ui.Stage = function(player, uni, canvas, contentView, shipView, hudDisp) {
     var me = this;
-    this.shipBar = new ui.ShipBar(player, shipView);
-    this.starmap = new ui.Starmap(player, uni, canvas);
-    this.systemView = new ui.SystemView(player, uni, this.shipBar, me.starmap.selected, contentView);
-    this.designerView = new ui.DesignerView(player, contentView);
-    this.active = this.starmap;
-    this._hasSelection = false;
+    me.shipBar = new ui.ShipBar(player, shipView);
+    me.hud = hudDisp;
+    var uipipe = core.sealed({
+        updateShipBar: function(sys) {
+            me.shipBar.update(sys);
+        },
+        showStar: core.bind(me.hud, me.hud.showStar),
+        showPlanet: core.bind(me.hud, me.hud.showPlanet)
+    });
+    me.starmap = new ui.Starmap(player, uni, canvas);
+    me.systemView = new ui.SystemView(player, uni, uipipe, me.starmap.selected, contentView);
+    me.designerView = new ui.DesignerView(player, contentView);
+    me.active = me.starmap;
+    me._hasSelection = false;
 
-    this.onStarmapChange = function() {};
+    me.onStarmapChange = function() {};
 
     // Make so the starmap reacts to being clicked
     canvas.addEventListener('click', function(e) {
@@ -48,7 +56,7 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
     }, false);
     
     // Make so the starmap reacts to when the ship bar selection changes
-    this.shipBar.selectionChanged = function(selection) {
+    me.shipBar.selectionChanged = function(selection) {
         if (selection.length === 0) {
             me.starmap.deselectRange();
             displayStarmap();
@@ -62,10 +70,10 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
     };
     
     // Hookup the events to the starmap
-    this.starmap.selectionChanged = this.shipBar.update;
+    me.starmap.selectionChanged = me.shipBar.update;
 
     // Shows the starmap
-    this.viewStarmap = function() {
+    me.viewStarmap = function() {
         if (me.active !== me.starmap) {
             me.active = me.starmap;
             contentView.hide();
@@ -76,22 +84,22 @@ ui.Stage = function(player, uni, canvas, contentView, shipView) {
     };
     
     // Shows the system view
-    this.viewSystem = function() {
+    me.viewSystem = function() {
         view(me.systemView);
     };
 
     // Shows the designer view
-    this.viewDesigner = function() {
+    me.viewDesigner = function() {
         view(me.designerView);
     }
     
     // Displays the active ui
-    this.display = function() {
+    me.display = function() {
         me.active.display();
     };
     
     // Displays the active ui and updates the ship bar
-    this.update = function() {
+    me.update = function() {
         me.active.display();
         me.shipBar.update(me.starmap.selected());
     };

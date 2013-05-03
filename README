@@ -3,4 +3,8 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Fixed the button that toggles the starmap grid on or off. Before it would always be enabled, causing en error if clicked while not on the starmap. Unsure of what exactly triggered this error, but I think it was because a redraw is triggered when toggling the grid. Since the canvas was hidden (the canvas.style.display set to 'none') it would cause an error. Now the "Stage" type has a property "onStarmapChange" that is called when the starmap is either shown or hidden. When its shown, the button is enabled, otherwise it is disabled.
+Have added two types. The "Hud" type resides in the "ui" namespace and can be called to show information about stuff in a window-like thing. The "Star" type resides in the "world" namespace and represents the star of a system. A new function, "sealed", has also been added to the "core" namespace. This function will seal and then return any given object.
+
+What these changes has made is so now you can click a star to show information about it. At the moment this information isnt that varied. More variation is however planned. Its also planned to make so you can get information about a planet in a similar fashion.
+
+Need to figure out a better way to handle many arguments, since some functions are getting a bit silly.

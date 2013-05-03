@@ -83,6 +83,12 @@ var core = (function() {
         }
     };
 
+    // Seals and returns the given object
+    ns.sealed = function(obj) {
+        Object.seal(obj);
+        return obj;
+    };
+
     // Makes sure something is not undefined
     function defined(val, errMsg) {
         if (val === undefined) {

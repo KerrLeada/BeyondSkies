@@ -524,16 +524,52 @@ var world = (function() {
         return {row : row, col : col};
     };
     
+    // Gets the star types
+    ns.getStarTypes = function() {
+        return core.listOwn(ns.StarType);
+    };
+
     // Represents a star type
     ns.StarType = {
         RED: 'Red',
         YELLOW: 'Yellow',
         BLUE: 'Blue'
     };
-    
-    // Gets the star types
-    ns.getStarTypes = function() {
-        return core.listOwn(ns.StarType);
+
+    // Represents a star
+    ns.Star = function(type) {
+        var me = this;
+        var radius = null;
+        var mass = null;
+        this.type = function() {
+            return type;
+        }
+        this.radius = function() {
+            return radius;
+        }
+        this.mass = function() {
+            return mass;
+        }
+
+        // Setups the radius and the mass
+        function setup(sradius, smass) {
+            radius = sradius;
+            mass = smass;
+        }
+
+        // Sets the type and mass depending on the radius
+        if (type === ns.StarType.RED) {
+            setup(0.6, 0.4);
+        }
+        else if (type === ns.StarType.YELLOW) {
+            setup(1.1, 1.1);
+        }
+        else if (type === ns.StarType.BLUE) {
+            setup(2.3, 3.5);
+        }
+        else {
+            throw 'Unknown star type';
+        }
     };
 
     // Represents a star system
@@ -541,6 +577,7 @@ var world = (function() {
         var me = this;
         this.pos = pos;
         this.ships = new core.Hashtable();
+        this.star = new ns.Star(starType);
         this.planets = [];
         this.name = name;
         this.starType = starType;
