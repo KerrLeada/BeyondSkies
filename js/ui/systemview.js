@@ -53,7 +53,10 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
             table().addClass('sysview').append(
                 tr().append(
                     td().append(
-                        img().attr('src', 'grfx/' + me._starType[sys.starType]).click(function() {
+                        img('star').attr('src', 'grfx/' + me._starType[sys.starType]).click(function() {
+                            uipipe.showStar(me._selector());
+                        }),
+                        button('knowMore').text('Get facts').click(function() {
                             uipipe.showStar(me._selector());
                         })
                     ),
@@ -105,7 +108,12 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
                 ++count;
                 return td('paddedLeft').append(
                     div('centeredText').append(
-                        img().attr('src', 'grfx/' + me._mapping[planet.type]),
+                        div('planet').append(
+                            img().attr('src', 'grfx/' + me._mapping[planet.type]),
+                            button('knowMore').text('Get facts').click(function() {
+                                uipipe.showPlanet(planet);
+                            })
+                        ),
                         p().append(
                             sys.name + ' ' + planet.order,
                             planetInfo(player, parent, planet, hasColShip)

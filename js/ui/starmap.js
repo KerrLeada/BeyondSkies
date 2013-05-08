@@ -83,10 +83,12 @@ ui.Starmap = function(player, uni, canvas) {
             if (sys && (me._range === null || me._selected.distanceTo(sys) <= me._range)) {
                 me._highlighted = sys;
                 me.display();
+                canvas.style.cursor = "pointer";
             }
             else if (me._highlighted !== null) {
                 me._highlighted = null;
                 me.display();
+                canvas.style.cursor = "";
             }
         }
     };

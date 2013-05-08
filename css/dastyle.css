@@ -77,7 +77,9 @@ table.sysview
     padding-left: 50px;
     height: 100%;
 }
-
+.sysview td, td div.planet {
+    position:relative;
+}
 img.hiddenImg
 {
     display: none;
@@ -417,4 +419,17 @@ td.paddedLeft
 .sysIndicator.active
 {
     border:3px solid red;
+}
+.knowMore {
+    bottom:25%;
+    right:25%;
+    position:absolute;
+}
+.planet .knowMore {
+    bottom:15%;
+    right:15%;
+    position:absolute;
+}
+button:hover, .close:hover {
+    cursor:pointer;
 }
