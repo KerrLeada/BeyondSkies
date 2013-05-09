@@ -2,6 +2,11 @@
 var core = (function() {
     var ns = {};
 
+    // Creates a new random number in the given interval
+    ns.rnd = function(min, max) {
+        return (max - min) * Math.random() - min;
+    };
+
     // Pythagoras theorem
     ns.pythagoras = function(x, y) {
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
