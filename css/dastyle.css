@@ -77,7 +77,7 @@ table.sysview
     padding-left: 50px;
     height: 100%;
 }
-.sysview td, td div.planet {
+.sysview td, td div.star, td div.planet {
     position:relative;
 }
 img.hiddenImg

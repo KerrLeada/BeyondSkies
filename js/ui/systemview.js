@@ -53,12 +53,12 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
             table().addClass('sysview').append(
                 tr().append(
                     td().append(
-                        img('star').attr('src', 'grfx/' + me._starType[sys.starType]).click(function() {
-                            uipipe.showStar(me._selector());
-                        }),
-                        button('knowMore').text('Get facts').click(function() {
-                            uipipe.showStar(me._selector());
-                        })
+                        div('star').append(
+                            img().attr('src', 'grfx/' + me._starType[sys.starType]),
+                            button('knowMore').text('Get facts').click(function() {
+                                uipipe.showStar(me._selector());
+                            })
+                        )
                     ),
                     displayPlanets(sys)
                 )
