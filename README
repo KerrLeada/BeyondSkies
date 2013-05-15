@@ -3,4 +3,6 @@ An experimental and web based 4x game, taking place in space beyond the skies of
 Do note that this is a work in progress.
 
 Note about the latest:
-Have made so the "Get facts" button is placed properly for stars in firefox.
+A rather significant rewrite of the code, to make it cleaner and/or more maintainable. I hope, anyway. the changes has a lot to do with the new "defineProps" function in the "core" namespace, which makes it easier to create constant properties for an object (they cannot be deleted or changed). Other changes involves making sure that things that are expected to change will be changed through methods rather then directly changing a property. The rule of the thumb is that constants are properties and things that changes are methods, from a user of an objects point of view. The changes mainly involve the "world" namespace.
+
+The "core" namespace also has a "frozen" function that makes so an object cannot be changed (dont think it affects an objects prototype, though). Its just a convienient way to use the "Object.freeze" method.

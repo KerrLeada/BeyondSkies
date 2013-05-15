@@ -1,10 +1,21 @@
 // Contains useful functions intended for reuse
 var core = (function() {
+    'use strict';
     var ns = {};
 
     // Creates a new random number in the given interval
     ns.rnd = function(min, max) {
         return (max - min) * Math.random() - min;
+    };
+
+    // Defines immutable properties for an object
+    ns.defineProps = function(obj, props) {
+        for (var prop in props) {
+            Object.defineProperty(obj, prop, {
+                enumerable: true,
+                value: props[prop]
+            });
+        }
     };
 
     // Pythagoras theorem
@@ -91,6 +102,12 @@ var core = (function() {
     // Seals and returns the given object
     ns.sealed = function(obj) {
         Object.seal(obj);
+        return obj;
+    };
+
+    // Freezes and returns the given object
+    ns.frozen = function(obj) {
+        Object.freeze(obj);
         return obj;
     };
 
