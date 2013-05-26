@@ -1,6 +1,5 @@
-﻿'use strict';
-
-var world = (function() {
+﻿var world = (function() {
+    'use strict';
     var ns = {};
 
     // Function for creating a uid
@@ -442,7 +441,7 @@ var world = (function() {
 
         // Creates a ship in the given system from the spec with the given name
         me.create = function(type, sys) {
-            return me._specs.get(type).create(sys);
+            return specs.get(type).create(sys);
         };
     };
     
@@ -500,6 +499,12 @@ var world = (function() {
         createUid(me, 'shp');
     };
 
+    function listThisProps() {
+        return function() {
+            core.listOwn(this);
+        };
+    }
+
     // Represents planet types
     ns.PlanetType = core.frozen({
         JUNGLE: 'Jungle',
@@ -514,15 +519,20 @@ var world = (function() {
         OCEAN: 'Ocean',
         EXOTIC: 'Exotic',
         GAS_GIANT: 'Gas giant',
-        ICE_GIANT: 'Ice giant',
-        ASTEROID_FIELD: 'Asteroid field'
+        ICE_GIANT: 'Ice giant'
+    });
+
+    ns.AsteroidType = core.frozen({
+        CARBONACEOUS: 'Asteroid field',
+        SILICATE: 'Asteroid field',
+        METAL_RICH: 'Asteroid field'
     });
     
     // Returns a list of the planet types
-    ns.getPlanetTypes = function() {
+   /* ns.getPlanetTypes = function() {
         return core.listOwn(ns.PlanetType);
     };
-    
+    */
     // Represents a planet
     ns.PlanetInfo = function(type, mass, radius) {
         core.defineProps(this, {
@@ -533,8 +543,9 @@ var world = (function() {
     };
 
     // Represents an asteroid field
-    ns.AsteroidInfo = function(mass) {
+    ns.AsteroidInfo = function(type, mass) {
         core.defineProps(this, {
+            type: type,
             mass: 0.0004
         });
     };
@@ -545,16 +556,10 @@ var world = (function() {
         var colony = null;
         core.defineProps(me, {
             name: sysName + ' ' + orbitNr,
-            orbitNr: orbitNr
+            orbitNr: orbitNr,
+            info: objInfo,
+            type: objInfo.type
         });
-
-        /*me.sys = function() {
-            return sys;
-        };*/
-
-        me.info = function() {
-            return objInfo;
-        };
 
         me.colony = function(col) {
             if (col) {
@@ -562,6 +567,10 @@ var world = (function() {
                 return;
             }
             return colony;
+        };
+
+        me.isColonized = function() {
+            return colony !== null;
         };
 
         createUid(me, 'ent');
@@ -629,8 +638,16 @@ var world = (function() {
         };
 
         // Returns an array of the system objects
-        me.sysObjects = function() {
+        me.sysObjects = function(orbitNr) {
+            if (orbitNr !== undefined) {
+                return sysObjects[orbitNr];
+            }
             return sysObjects.slice(0);
+        };
+
+        // Returns true if there are no system objects in this system
+        me.isEmpty = function() {
+            return sysObjects.length === 0;
         };
         
         // Ships enters a system
@@ -652,11 +669,21 @@ var world = (function() {
         // Returns the civilizations that has colonies in this system
         me.civs = function() {
             return sysObjects.reduce(function(civs, sysObj) {
-                if (sysObj.colony && $.inArray(sysObj.colony.civ, civs) === -1) {
-                    civs.push(sysObj.colony.civ);
+                if (sysObj.isColonized() && $.inArray(sysObj.colony.civ, civs) === -1) {
+                    civs.push(sysObj.colony().civ());
                 }
                 return civs;
             }, []);
+        };
+
+        // Checks if there are any civilization in the system
+        me.hasCivs = function() {
+            for (var i = 0, len = sysObjects.length; i < len; ++i) {
+                if (sysObjects[i].isColonized()) {
+                    return true;
+                }
+            }
+            return false;
         };
         
         // Checks if the given civilization has ships in the system
@@ -729,7 +756,7 @@ var world = (function() {
             return colIncome;
         };
 
-        setSys(civ.home, new ns.Colony(civ, civ.home.sysObjects[0]));
+        setSys(civ.home, new ns.Colony(civ, civ.home.sysObjects(0)));
         
         // Colonizes a system object
         this.colonize = function(sysObj) {

@@ -10,9 +10,9 @@ ui.Hud = function(hudData, disp) {
     this.showStar = function(sys) {
         var star = sys.star;
         hudData.empty();
-        append('The ' + sys.name + ' has a ' + star.type().toLowerCase() + ' star');
-        append('Radius: ' + star.radius() + ' solar radii');
-        append('Mass: ' + star.mass() + ' solar masses');
+        append('The ' + sys.name + ' has a ' + star.type.toLowerCase() + ' star');
+        append('Radius: ' + star.radius + ' solar radii');
+        append('Mass: ' + star.mass + ' solar masses');
         disp.show();
     };
 

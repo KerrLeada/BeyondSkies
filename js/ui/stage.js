@@ -11,7 +11,7 @@ ui.Stage = function(player, uni, canvas, contentView, shipView, hudDisp) {
             me.shipBar.update(sys);
         },
         showStar: core.bind(me.hud, me.hud.showStar),
-        showPlanet: core.bind(me.hud, me.hud.showPlanet)
+        showWorld: core.bind(me.hud, me.hud.showPlanet)
     });
     me.starmap = new ui.Starmap(player, uni, canvas);
     me.systemView = new ui.SystemView(player, uni, uipipe, me.starmap.selected, contentView);
