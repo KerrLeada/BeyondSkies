@@ -43,7 +43,7 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     this._starType[world.StarType.YELLOW] = 'yellow_star.png';
 
     function image(type) {
-        if (!(type instanceof String)) {
+        if (!(typeof type === 'string' || type instanceof String)) {
             throw new TypeError('Expecting string');
         }
         return 'grfx/' + me._mapping[type];
@@ -138,8 +138,6 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     // Shows the planet information
     function sysObjInfo(player, parent, sysObj, hasColShip) {
         var result = colonyInfo(player, parent, sysObj, hasColShip);
-        var clazz = div().html('Class ' + sysObj.clazz);
-        result.splice(0, 0, clazz);
         var winfo = div().html(worldInfo(sysObj.type));
         return div('dispSmall').append(winfo, result);
     }
@@ -183,8 +181,8 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     // Creates the population info text
     function populationInfo(player, colony) {
         if (colony) {
-            var info = colony.civ === player ?
-                       Math.floor(colony.population * 10) / 10 + ' / ' + colony.maxPopulation :
+            var info = colony.civ() === player ?
+                       Math.floor(colony.population() * 10) / 10 + ' / ' + colony.maxPopulation() :
                        '???'
             return 'Population: ' + info;
         }

@@ -551,11 +551,12 @@
     };
 
     // Represents a system object, like a planet or asteroid field
-    ns.SysObject = function(orbitNr, sysName, objInfo) {
+    ns.SysObject = function(orbitNr, sys, objInfo) {
         var me = this;
         var colony = null;
         core.defineProps(me, {
-            name: sysName + ' ' + orbitNr,
+            name: sys.name + ' ' + orbitNr,
+            sys: sys,
             orbitNr: orbitNr,
             info: objInfo,
             type: objInfo.type
