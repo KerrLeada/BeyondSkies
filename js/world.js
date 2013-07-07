@@ -1,7 +1,17 @@
-﻿'use strict';
-
-var world = (function() {
+﻿var world = (function() {
+    'use strict';
     var ns = {};
+
+    // Function for creating a uid
+    var createUid = (function() {
+        var uidCounter = 0;
+        return function(obj, prefix) {
+            Object.defineProperty(obj, 'uid', {
+                enumerable: true,
+                value: prefix + (++uidCounter)
+            });
+        }
+    }());
     
     // Creates cost
     function mkcost(money, production) {    
@@ -35,13 +45,15 @@ var world = (function() {
     ns.ShipUtils = ShipUtils;
     
     // Function that creates a new hull
-    var hullUid = 0;
     ns.Hull = function(name, maxHealth, size, cost) {
-        this.name = name;
-        this.maxHealth = maxHealth;
-        this.size = size;
-        this.cost = cost;
-        this.uid = 'hul' + ++hullUid;
+        core.defineProps(this, {
+            name: name,
+            maxHealth: maxHealth,
+            size: size,
+            cost: cost
+        });
+
+        createUid(this, 'hul');
     };
     ns.Hull.COLONY_HULL = new ns.Hull('Colony Hull', 1, 50, mkcost(1, 1));
     ns.Hull.SMALL_HULL = new ns.Hull('Small Hull', 15, 20, mkcost(1, 1));
@@ -49,33 +61,35 @@ var world = (function() {
     ns.Hull.LARGE_HULL = new ns.Hull('Large Hull', 130, 80, mkcost(10, 7));
     
     // Module flags
-    var ModuleFlags = {
+    var ModuleFlags = core.frozen({
         NONE: 0,   // 0000
         ENGINE: 1, // 0001
         SENSOR: 2, // 0010
         WEAPON: 4, // 0100
         COLONY: 8  // 1000
-    };
+    });
     ns.ModuleFlags = ModuleFlags;
 
     // A module
-    var modUid = 0;
+    //var modUid = 0;
     var Module = function(name, flag, cost, data) {
         if (!data) {
             throw new TypeError('Expecting data');
         }
-        this.name = name;
-        this.flag = flag;
-        this.size = data.size || 5;
-        this.desc = data.desc || '';
-        this.cost = cost;
-        this.uid = 'mod' + ++modUid;
+        core.defineProps(this, {
+            name: name,
+            flag: flag,
+            size: data.size || 5,
+            desc: data.desc || '',
+            cost: cost,
+            
+            health: data.health || 0,
+            speed: data.speed || 0,
+            range: data.range || 0,
+            attack: data.attack || 0
+        });
 
-        // The stats
-        this.health = data.health || 0;
-        this.speed = data.speed || 0;
-        this.range = data.range || 0;
-        this.attack = data.attack || 0;
+        createUid(this, 'mod');
     };
     ns.Module = Module;
     
@@ -115,7 +129,7 @@ var world = (function() {
         var spaceTaken = 0;
 
         // Calculates the stats        
-        this.stats = function() {
+        me.stats = function() {
             var stats = {maxHealth: 0, range: 0, speed: 0, attack: 0, flags: ModuleFlags.NONE, cost: mkcost(0, 0), spaceTaken: spaceTaken};
             modules.forEach(function(curr) {
                 var mod = curr.mod;
@@ -131,7 +145,7 @@ var world = (function() {
         };
 
         // Returns the amount of space taken
-        this.spaceTaken = function() {
+        me.spaceTaken = function() {
             return spaceTaken;
         };
 
@@ -145,7 +159,7 @@ var world = (function() {
         }
 
         // Create the view object and seal it
-        var view = {
+        var view = core.frozen({
             engines: getter(ModuleFlags.ENGINE),
             sensors: getter(ModuleFlags.SENSOR),
             weapons: getter(ModuleFlags.WEAPON),
@@ -154,17 +168,16 @@ var world = (function() {
             map: core.bind(modules, modules.map),
             filter: core.bind(modules, modules.filter),
             forEach: core.bind(modules, modules.forEach)
-        }
-        Object.seal(view);
+        });
 
         // Returns the view object
-        this.view = function() {
+        me.view = function() {
             return view;
         };
 
         // Adds the given module in the list of modules, if it fits
         // Returns true if the module was added and false otherwise
-        this.add = function(mod) {
+        me.add = function(mod) {
             if (spaceTaken + mod.size <= hullSize) {
                 var m = modules.tryGet(mod.uid);
                 if (m) {
@@ -180,7 +193,7 @@ var world = (function() {
         };
 
         // Removes a module with the given module id
-        this.remove = function(modId) {
+        me.remove = function(modId) {
             var entry = modules.get(modId);
             spaceTaken -= entry.mod.size;
             --entry.count;
@@ -190,7 +203,7 @@ var world = (function() {
         };
 
         // Creates a copy of the ship module manager
-        this.copy = function() {
+        me.copy = function() {
             return new ns.ModuleManager(hullSize, me);
         };
 
@@ -220,28 +233,28 @@ var world = (function() {
     // A module manager for a civilization
     ns.CivModuleManager = function() {
         var me = this;
-        this._hulls = new core.Hashtable();
+        me._hulls = new core.Hashtable();
 
         // Add the hulls
         [ns.Hull.COLONY_HULL, ns.Hull.SMALL_HULL, ns.Hull.MEDIUM_HULL, ns.Hull.LARGE_HULL].forEach(function(hull) {
             me._hulls.add(hull.uid, hull);
         });
         
-        this._engines = new core.Hashtable();
-        this._sensors = new core.Hashtable();
-        this._weapons = new core.Hashtable();
-        this._other = new core.Hashtable();
-        this._all = new core.Hashtable();
+        me._engines = new core.Hashtable();
+        me._sensors = new core.Hashtable();
+        me._weapons = new core.Hashtable();
+        me._other = new core.Hashtable();
+        me._all = new core.Hashtable();
         
         // Returns the hulls
-        this.hulls = core.getter(this._hulls);
+        me.hulls = core.getter(me._hulls);
 
         // Getters for the modules
-        this.engines = core.getter(this._engines);
-        this.sensors = core.getter(this._sensors);
-        this.weapons = core.getter(this._weapons);
-        this.other = core.getter(this._other);
-        this.all = core.getter(this._all);
+        me.engines = core.getter(me._engines);
+        me.sensors = core.getter(me._sensors);
+        me.weapons = core.getter(me._weapons);
+        me.other = core.getter(me._other);
+        me.all = core.getter(me._all);
 
         // Adds the given array of modules to the given target array
         function addAllMods(target, toAdd) {
@@ -254,7 +267,7 @@ var world = (function() {
         }
 
         // Adds the modules in the given module object to the module manager
-        this.addModules = function(mods) {
+        me.addModules = function(mods) {
             addAllMods(me._engines, mods.engines);
             addAllMods(me._sensors, mods.sensors);
             addAllMods(me._weapons, mods.weapons);
@@ -262,22 +275,22 @@ var world = (function() {
         };
 
         // Access and iteration of the modules
-        this.get = core.bind(this._all, this._all.get);
-        this.forEach = core.bind(this._all, this._all.forEach);
-        this.map = core.bind(this._all, this._all.map);
+        me.get = core.bind(me._all, me._all.get);
+        me.forEach = core.bind(me._all, me._all.forEach);
+        me.map = core.bind(me._all, me._all.map);
     };
 
     // Represents a fleet
     // Fleets are used to group ships and travel in deep space
     // The last argument, ships, is an optional hashtable for
     // the ships that the fleet contains
-    var fleetUid = 0;
+    //var fleetUid = 0;
     ns.Fleet = function(ds, civ, sys, ships) {
         var me = this;
-        this.sys = sys;
-        this.civ = civ;
-        this.ships = new core.Hashtable(ships);
-        this.onArrival = function() {};
+        me.sys = sys;
+        me.civ = civ;
+        me.ships = new core.Hashtable(ships);
+        me.onArrival = function() {};
         
         // Used to update the fleet range and speed
         // Note that this doesnt update the movement points of the
@@ -288,21 +301,22 @@ var world = (function() {
         }
         
         // Set the fleet speed, range and movement points
-        if (!this.ships.isEmpty()) {
+        if (!me.ships.isEmpty()) {
             updateRangeSpeed();
-            this.mp = this.speed;
+            me.mp = me.speed;
         }
         else {
-            this.range = 0;
-            this.speed = 0;
-            this.mp = 0;
+            me.range = 0;
+            me.speed = 0;
+            me.mp = 0;
         }
         
         // Set the fleet uid
-        this.uid = 'flt' + ++fleetUid;
+        //this.uid = 'flt' + ++fleetUid;
+        createUid(me, 'flt');
         
         // Adds all the given ships to the fleet
-        this.addShips = function(ships) {
+        me.addShips = function(ships) {
             for (var i = 0; i < ships.length; ++i) {
                 me.ships.add(ships[i].uid, ships[i]);
             }
@@ -310,13 +324,13 @@ var world = (function() {
         };
         
         // Removes all the given ships from the fleet
-        this.removeShips = function(ships) {
+        me.removeShips = function(ships) {
             me.ships.removeAll(ships);
             updateRangeSpeed();
         };
         
         // Sends the fleet to the marked destination (returns true if there was a destination, false otherwise)
-        this.sendTo = function(sys) {
+        me.sendTo = function(sys) {
             var shortest = me.ships.findBest(ShipUtils.shortestRange);
             if (me.sys.distanceTo(sys) <= shortest.range()) {
                 var ships = me.ships.values();
@@ -328,7 +342,7 @@ var world = (function() {
         };
         
         // Called to update the fleet state when the turn has ended
-        this.update = function() {
+        me.update = function() {
             me.mp = me.speed;
         };
     };
@@ -337,18 +351,14 @@ var world = (function() {
     ns.ShipSpec = function(civ, name, hull, modules) {
         var me = this;
         var stats = null;
-        this.civ = civ;
-        this.name = name;
-        this.hull = hull;
+        core.defineProps(me, {
+            civ: civ,
+            name: name,
+            hull: hull
+        });
 
         // Set the modules
-        this.modules = function() {
-            return me._modules.view();
-        };
-        this.copyModules = function() {
-            return me._modules.copy();
-        };
-        this.updateModules = function(mods) {
+        me.updateModules = function(mods) {
             me._modules = new ns.ModuleManager(hull.size, mods);
             stats = me._modules.stats();
             me._stats = stats;
@@ -356,10 +366,18 @@ var world = (function() {
                 throw 'Cannot fit this much in this hull';
             }
         };
-        this.updateModules(modules);
+        me.updateModules(modules);
+
+        // Get the modules
+        me.modules = function() {
+            return me._modules.view();
+        };
+        me.copyModules = function() {
+            return me._modules.copy();
+        };
 
         // Returns the stats of the ships constructed with this spec
-        this.stats = function() {
+        me.stats = function() {
             return core.copy(stats);
         };
 
@@ -374,7 +392,7 @@ var world = (function() {
         
         // Creates a new ship from the ship spec
         // Accepts the ship name and the owner of the ship
-        this.create = function(sys) {
+        me.create = function(sys) {
             sys.enter([new ns.Ship(civ, me)]);
         };
     };
@@ -383,7 +401,6 @@ var world = (function() {
     ns.SpecManager = function(civ) {
         var me = this;
         var specs = new core.Hashtable();
-        this._specs = specs;
 
         // Checks if the name is an invalid spec name
         function isInvalid(name) {
@@ -391,7 +408,7 @@ var world = (function() {
         }
 
         // Adds a spec
-        this.addSpec = function(name, hull, modules) {
+        me.addSpec = function(name, hull, modules) {
             name = $.trim(name);
             if (! (specs.has(name) || isInvalid(name))) {
                 modules = modules || [];
@@ -402,7 +419,7 @@ var world = (function() {
         };
 
         // Updates the spec with the given name with the given modules
-        this.updateSpec = function(name, modules) {
+        me.updateSpec = function(name, modules) {
             var spec = specs.tryGet(name);
             if (spec) {
                 spec.updateModules(modules);
@@ -412,80 +429,84 @@ var world = (function() {
         };
 
         // Removes the spec with the given name
-        this.removeSpec = function(name) {
+        me.removeSpec = function(name) {
             specs.remove(name);
         };
         
-        this.forEach = core.bind(specs, specs.forEach);
-        this.map = core.bind(specs, specs.map);
-        this.list = core.bind(specs, specs.values);
+        // Iteration
+        me.forEach = core.bind(specs, specs.forEach);
+        me.map = core.bind(specs, specs.map);
+        me.list = core.bind(specs, specs.values);
         
-        this.create = function(type, sys) {
-            return me._specs.get(type).create(sys);
+
+        // Creates a ship in the given system from the spec with the given name
+        me.create = function(type, sys) {
+            return specs.get(type).create(sys);
         };
     };
     
     // Represents a ship
-    var shipUid = 0;
     ns.Ship = function(civ, spec) {
         var me = this;
-        this.type = spec.name;
-        this.modules = spec.copyModules();
-        this.uid = 'shp' + ++shipUid;
-
-        this._civ = civ;
-        this._system = null;
+        var system = null;
+        core.defineProps(me, {
+            type: spec.name,
+            modules: spec.copyModules()
+        });
 
         // Returns the civilization
-        this.civ = function() {
-            return me._civ;
+        me.civ = function() {
+            return civ;
         };
 
         // Returns the system
-        this.system = function() {
-            return me._system;
+        me.system = function() {
+            return system;
         };
 
         // Sets the system
-        this.arriveAt = function(sys) {
-            me._system = sys;
+        me.arriveAt = function(sys) {
+            system = sys;
         };
         
         // Stats
         var stats = spec.stats();
         
-        this.maxHealth = function() {
+        me.maxHealth = function() {
             return stats.maxHealth;
         };
-
-        this.health = function() {
+        me.health = function() {
             return stats.health;
         };
-
-        this.attack = function() {
+        me.attack = function() {
             return stats.attack;
         };
-
-        this.range = function() {
+        me.range = function() {
             return stats.range;
         };
-
-        this.speed = function() {
+        me.speed = function() {
             return stats.speed;
         };
-
-        this.mp = function() {
+        me.mp = function() {
             return stats.mp;
         };
 
         // Checks the ship using the given bitmask
-        this.check = function(flags) {
+        me.check = function(flags) {
             return (stats.flags & flags) === flags;
         };
+
+        createUid(me, 'shp');
     };
 
+    function listThisProps() {
+        return function() {
+            core.listOwn(this);
+        };
+    }
+
     // Represents planet types
-    ns.PlanetType = {
+    ns.PlanetType = core.frozen({
         JUNGLE: 'Jungle',
         BARREN: 'Barren',
         WATER: 'Water',
@@ -498,30 +519,67 @@ var world = (function() {
         OCEAN: 'Ocean',
         EXOTIC: 'Exotic',
         GAS_GIANT: 'Gas giant',
-        ICE_GIANT: 'Ice giant',
-        ASTEROID_FIELD: 'Asteroid field'
-    };
+        ICE_GIANT: 'Ice giant'
+    });
+
+    ns.AsteroidType = core.frozen({
+        CARBONACEOUS: 'Asteroid field',
+        SILICATE: 'Asteroid field',
+        METAL_RICH: 'Asteroid field'
+    });
     
     // Returns a list of the planet types
-    ns.getPlanetTypes = function() {
+   /* ns.getPlanetTypes = function() {
         return core.listOwn(ns.PlanetType);
     };
-    
+    */
     // Represents a planet
-    var planetUid = 0;
-    ns.Planet = function(order, sys, type, clazz) {
+    ns.PlanetInfo = function(type, mass, radius) {
+        core.defineProps(this, {
+            type: type,
+            mass: mass,
+            radius: radius
+        });
+    };
+
+    // Represents an asteroid field
+    ns.AsteroidInfo = function(type, mass) {
+        core.defineProps(this, {
+            type: type,
+            mass: 0.0004
+        });
+    };
+
+    // Represents a system object, like a planet or asteroid field
+    ns.SysObject = function(orbitNr, sys, objInfo) {
         var me = this;
-        this.type = type;
-        this.order = order;
-        this.sys = sys;
-        this.clazz = clazz;
-        this.colony = null;
-        this.uid = 'pl' + ++planetUid;
+        var colony = null;
+        core.defineProps(me, {
+            name: sys.name + ' ' + orbitNr,
+            sys: sys,
+            orbitNr: orbitNr,
+            info: objInfo,
+            type: objInfo.type
+        });
+
+        me.colony = function(col) {
+            if (col) {
+                colony = col;
+                return;
+            }
+            return colony;
+        };
+
+        me.isColonized = function() {
+            return colony !== null;
+        };
+
+        createUid(me, 'ent');
     };
 
     // Represents a position
     ns.pos = function(row, col) {
-        return {row : row, col : col};
+        return core.frozen({row : row, col : col});
     };
     
     // Gets the star types
@@ -530,33 +588,25 @@ var world = (function() {
     };
 
     // Represents a star type
-    ns.StarType = {
+    ns.StarType = core.frozen({
         RED: 'Red',
         YELLOW: 'Yellow',
         BLUE: 'Blue'
-    };
+    });
 
     // Represents a star
     ns.Star = function(type) {
         var me = this;
-        var radius = null;
-        var mass = null;
-        this.type = function() {
-            return type;
-        }
-        this.radius = function() {
-            return radius;
-        }
-        this.mass = function() {
-            return mass;
-        }
 
         // Setups the radius and the mass
-        function setup(sradius, smass) {
-            radius = sradius;
-            mass = smass;
+        function setup(radius, mass) {
+            core.defineProps(me, {
+                type: type,
+                radius: radius,
+                mass: mass
+            });
         }
-
+        
         // Sets the type and mass depending on the radius
         if (type === ns.StarType.RED) {
             setup(0.6, 0.4);
@@ -573,18 +623,36 @@ var world = (function() {
     };
 
     // Represents a star system
-    ns.StarSystem = function(name, pos, starType) {
+    ns.StarSystem = function(name, pos, starType, sysObjects) {
         var me = this;
-        this.pos = pos;
-        this.ships = new core.Hashtable();
-        this.star = new ns.Star(starType);
-        this.planets = [];
-        this.name = name;
-        this.starType = starType;
-        this.onColonized = function() {};
+        core.defineProps(me, {
+            name: name,
+            ships: new core.Hashtable(),
+            star: new ns.Star(starType),
+            starType: starType,
+            pos: pos
+        });
+
+        var onObjColonized = function() {};
+        me.onColonized = function(callback) {
+            onObjColonized = callback;
+        };
+
+        // Returns an array of the system objects
+        me.sysObjects = function(orbitNr) {
+            if (orbitNr !== undefined) {
+                return sysObjects[orbitNr];
+            }
+            return sysObjects.slice(0);
+        };
+
+        // Returns true if there are no system objects in this system
+        me.isEmpty = function() {
+            return sysObjects.length === 0;
+        };
         
         // Ships enters a system
-        this.enter = function(ships) {
+        me.enter = function(ships) {
             for (var i = 0, len = ships.length; i < len; i++) {
                 me.ships.set(ships[i].uid, ships[i]);
                 ships[i].arriveAt(me);
@@ -592,25 +660,35 @@ var world = (function() {
         };
         
         // Ships leaves the system
-        this.leave = function(ships) {
+        me.leave = function(ships) {
             for (var i = 0, len = ships.length; i < len; i++) {
                 me.ships.remove(ships[i].uid);
-                ships[i].system = null;
+                ships[i].system(null);
             }
         };
 
         // Returns the civilizations that has colonies in this system
-        this.civs = function() {
-            return me.planets.reduce(function(civs, planet) {
-                if (planet.colony && $.inArray(planet.colony.civ, civs) === -1) {
-                    civs.push(planet.colony.civ);
+        me.civs = function() {
+            return sysObjects.reduce(function(civs, sysObj) {
+                if (sysObj.isColonized() && $.inArray(sysObj.colony.civ, civs) === -1) {
+                    civs.push(sysObj.colony().civ());
                 }
                 return civs;
             }, []);
         };
+
+        // Checks if there are any civilization in the system
+        me.hasCivs = function() {
+            for (var i = 0, len = sysObjects.length; i < len; ++i) {
+                if (sysObjects[i].isColonized()) {
+                    return true;
+                }
+            }
+            return false;
+        };
         
         // Checks if the given civilization has ships in the system
-        this.hasShips = function(civ, pred) {
+        me.hasShips = function(civ, pred) {
             var ships = me.ships.values();
             for (var i = 0, len = ships.length; i < len; i++) {
                 if (ships[i].civ === civ && (pred === undefined || pred(ships[i]))) {
@@ -621,71 +699,95 @@ var world = (function() {
         };
         
         // Calculates the distance to the other system
-        this.distanceTo = function(otherSys) {
+        me.distanceTo = function(otherSys) {
             var rows = Math.abs(me.pos.row - otherSys.pos.row);
             var cols = Math.abs(me.pos.col - otherSys.pos.col);
             return core.pythagoras(rows, cols);
         };
     };
     
-    // Represents a colony on a planet
-    var colUid = 0;
-    ns.Colony = function(civ, planet) {
+    // Represents a colony on a system object
+    //var colUid = 0;
+    ns.Colony = function(civ, sysObj) {
         var me = this;
-        this.civ = civ;
-        this.sys = planet.sys;
-        this.planet = planet;
-        this.population = 1;
-        this.maxPopulation = Math.round(planet.clazz * 1.5);
-        this.uid = 'col' + ++colUid;
-        planet.colony = this;
+        var population = 1;
+        var maxPopulation = 8;
+        core.defineProps(me, {
+            sys: sysObj.sys,
+            sysObj: sysObj
+        });
+
+        me.civ = function(newCiv) {
+            if (newCiv) {
+                civ = newCiv;
+                return;
+            }
+            return civ;
+        };
+
+        me.population = function() {
+            return population;
+        };
+        me.maxPopulation = function() {
+            return maxPopulation;
+        };
         
         // Updates the colony
-        this.update = function() {
-            if (me.civ && me.population < me.maxPopulation) {
-                me.population = Math.min(me.population + me.civ.growth, me.maxPopulation);
+        me.update = function() {
+            if (civ && population < maxPopulation) {
+                population = Math.min(population + civ.growth, maxPopulation);
             }
         };
+
+        createUid(me, 'col');
+        sysObj.colony(me);
     };
     
     // Handles the colonies of a civilization
     ns.ColonyManager = function(civ) {
         var me = this;
-        this.civ = civ;
-        this.income = 0;
-        this.systems = new core.Hashtable();
-        this.colonies = new core.Hashtable();
-        setSys(civ.home, new ns.Colony(civ, civ.home.planets[0]));
+        core.defineProps(me, {
+            civ: civ,
+            systems: new core.Hashtable(),
+            colonies: new core.Hashtable()
+        });
+
+        var colIncome = 0;
+        me.income = function() {
+            return colIncome;
+        };
+
+        setSys(civ.home, new ns.Colony(civ, civ.home.sysObjects(0)));
         
-        // Colonizes a planet
-        this.colonize = function(planet) {
+        // Colonizes a system object
+        this.colonize = function(sysObj) {
             // Make sure there is a colony ship
-            var sys = planet.sys;
+            var sys = sysObj.sys;
             var colship = sys.ships.find(function(s) {
                 return s.civ() === civ && s.check(ModuleFlags.COLONY);
             });
             if (colship) {
-                // Remove the colony ship and colonize the planet
+                // Remove the colony ship and colonize the system object
                 sys.ships.remove(colship.uid);
                 if (me.colonies.has(sys.name)) {
                     sys = me.colonies.get(sys.name);
-                    sys.colonies.push(new ns.Colony(civ, planet));
+                    sys.colonies.push(new ns.Colony(civ, sysObj));
                 }
                 else {
                     me.systems.set(sys.name, sys);
-                    var col = new ns.Colony(civ, planet);
+                    var col = new ns.Colony(civ, sysObj);
                     setSys(sys, col);
                 }
             }
             else {
                 // So failure wont be silent :P
-                throw 'ColonyManager: Colonization of ' + planet.sys.name + ' ' + planet.order + ' failed due to lack of a colony ship';
+                throw 'ColonyManager: Colonization of ' + sysObj.sys.name + ' ' + sysObj.order + ' failed due to lack of a colony ship';
             }
         };
         
         // Go through all the systems and colonies, update them and calculate the income and all that crap
         this.update = function() {
-            me.income = 0;
+            colIncome = 0;
             me.colonies.forEach(function(sys) {
                 sys.constQueue.update();
                 var colonies = sys.colonies;
@@ -693,12 +795,12 @@ var world = (function() {
                 var production = 0;
                 for (var i = 0, len = colonies.length; i < len; i++) {
                     colonies[i].update();
-                    income += colonies[i].population * 1.2;
-                    production += colonies[i].population * 0.75;
+                    income += colonies[i].population() * 1.2;
+                    production += colonies[i].population() * 0.75;
                 }
-                sys.income = income - sys.constQueue.cost;
+                sys.income = income - sys.constQueue.cost();
                 sys.production = production;
-                me.income += sys.income;
+                colIncome += sys.income;
             });
         };
         
@@ -715,16 +817,20 @@ var world = (function() {
     // The construction queue (can only build ships atm)
     ns.ConstQueue = function(civ, sysInfo, sys) {
         var me = this;
-        this.cost = 0;
-        this._queue = [];
-        
+        var constCost = 0;
+        var queue = [];
+
+        // Returns the current construction cost
+        me.cost = function() {
+            return constCost;
+        };
 
         // Builds something
-        this.build = function(spec) {
+        me.build = function(spec) {
             var specCost = spec.cost();
             var eta = calcEta(specCost.production) + lastEta();
-            var turnCost = (me._queue.length === 0) ? specCost.money / eta : 0;
-            me._queue.push({
+            var turnCost = (queue.length === 0) ? specCost.money / eta : 0;
+            queue.push({
                 progress: 0,
                 expenses: 0,
                 turnCost: turnCost,
@@ -735,9 +841,9 @@ var world = (function() {
         };
         
         // Lists what is building
-        this.building = function() {
+        me.building = function() {
             // Return copies
-            return me._queue.map(function(x) {
+            return queue.map(function(x) {
                 return {
                     progress: x.progress,
                     expenses: x.expenses,
@@ -750,11 +856,11 @@ var world = (function() {
         };
         
         // Update the construction queue
-        this.update = function() {
+        me.update = function() {
             // Check if there is something to build
-            if (me._queue.length > 0) {
+            if (queue.length > 0) {
                 // Get the building thing and build on it
-                var current = me._queue[0];
+                var current = queue[0];
                 if (current.progress + sysInfo.production < current.cost.production) {
                     current.progress += sysInfo.production;
                     
@@ -762,7 +868,7 @@ var world = (function() {
                     if (sysInfo.production > 0) {
                         var eta = Math.ceil((current.cost.production - current.progress) / sysInfo.production);
                         var cost = (current.cost.money - current.expenses) / eta;
-                        me.cost = current.turnCost;
+                        constCost = current.turnCost;
                         current.expenses += current.turnCost;
                         current.eta = eta;
                         
@@ -782,7 +888,7 @@ var world = (function() {
                         // If the production is 0 then set the eta to infinity and make so it wont cost anything
                         current.eta = Number.POSITIVE_INFINITY;
                         current.turnCost = 0;
-                        me.cost = 0;
+                        constCost = 0;
                     }
                     
                     // Update the eta of the other stuff in the construction queue
@@ -791,29 +897,29 @@ var world = (function() {
                 else {
                     // If whatever was building was built, create it and then get make so the final money is payed
                     current.spec.create(sys);
-                    me._queue.splice(0, 1);
-                    me.cost = current.turnCost;
+                    queue.splice(0, 1);
+                    constCost = current.turnCost;
                     current.turnCost = 0;
                     
                     // Update the eta of the other stuff in the construction queue and the turn cost of the first thing
                     updateQueue();
-                    if (me._queue.length > 0) {
-                        current = me._queue[0];
+                    if (queue.length > 0) {
+                        current = queue[0];
                         current.turnCost = current.cost.money / current.eta;
                     }
                 }
             }
-            else if (me.cost > 0) {
+            else if (constCost > 0) {
                 // If there was nothing to build but there was a cost, set the cost to 0
-                me.cost = 0;
+                constCost = 0;
             }
         };
         
         function updateQueue() {
-            if (me._queue.length > 1) {
-                var eta = me._queue[0].eta;
-                for (var i = 1, len = me._queue.length; i < len; i++) {
-                    var current = me._queue[i];
+            if (queue.length > 1) {
+                var eta = queue[0].eta;
+                for (var i = 1, len = queue.length; i < len; i++) {
+                    var current = queue[i];
                     eta += calcEta(current.cost.production);
                     current.eta = eta;
                 }
@@ -827,8 +933,8 @@ var world = (function() {
         }
         
         function lastEta() {
-            if (me._queue.length > 0)
-                return me._queue[me._queue.length - 1].eta;
+            if (queue.length > 0)
+                return queue[queue.length - 1].eta;
             return 0;
         }
     };
@@ -836,7 +942,9 @@ var world = (function() {
     // Represents deep space (the space between star systems)
     ns.DeepSpace = function(uni) {
         var me = this;
-        this.fleets = new core.Hashtable();
+        core.defineProps(me, {
+            fleets: new core.Hashtable()
+        });
         
         // The fleet arrives at its destination
         function arrive(fleet, dest) {
@@ -847,7 +955,7 @@ var world = (function() {
         }
         
         // Enters a ship to deep space
-        this.enter = function(fleet, dest) {
+        me.enter = function(fleet, dest) {
             var origin = fleet.sys;
             var distance = fleet.sys.distanceTo(dest);
             
@@ -869,12 +977,12 @@ var world = (function() {
         };
         
         // Make the given fleet leave deep space
-        this.leave = function(fleet) {
+        me.leave = function(fleet) {
             me.fleets.remove(fleet.uid);
         };
         
         // Update the fleets
-        this.update = function() {
+        me.update = function() {
             me.fleets.forEach(function(entry) {
                 entry.fleet.update();
                 if (entry.distance > entry.fleet.mp) {
@@ -890,40 +998,45 @@ var world = (function() {
     // Represents a civilization
     ns.Civ = function(name, type, home) {
         var me = this;
-        this.name = name;
-        this.type = type;
-        this.home = home;
-        this.ships = new core.Hashtable();
-        this.modules = new ns.CivModuleManager();
-        this.specs = new ns.SpecManager(this);
-        this.growth = 0.15;
+        core.defineProps(me, {
+            name: name,
+            type: type,
+            home: home,
+            ships: new core.Hashtable(),
+            modules: new ns.CivModuleManager(),
+            specs: new ns.SpecManager(me),
+            growth: 0.15
+        });
         
         // Stores the systems the civilization has a presence in
-        //this._systems = new core.Hashtable();
-        //this._systems.set(home.name, home);
-        this._colonyMan = new ns.ColonyManager(this);
-        this._colonyMan.update();
-        this._systems = this._colonyMan.systems;
+        var colonyMan = new ns.ColonyManager(me);
+        colonyMan.update();
+        var systems = colonyMan.systems;
+        me.colonize = colonyMan.colonize;
         
         // Stores the visited systems
         // Each visited system will have its name as a key
         // It also stores the civs who was present at the time of the visit
-        this._visitedSystems = new core.Hashtable();
-        this._visitedSystems.set(home.name, [this]);
+        var visitedSystems = new core.Hashtable();
+        visitedSystems.set(home.name, [me]);
 
-        this.money = 5000;
-        this.income = this._colonyMan.income;
-        
-        this.colonize = this._colonyMan.colonize;
+        var money = 5000;
+        me.money = function() {
+            return money;
+        };
+        var income = colonyMan.income();
+        me.income = function() {
+            return income;
+        };
         
         // Returns a list of the systems
-        this.systems = function() {
-            return me._systems.values();
+        me.systems = function() {
+            return systems.values();
         };
         
         // Returns the information about the system
-        this.systemInfo = function(sys) {
-            var info = me._colonyMan.colonies.tryGet(sys.name);
+        me.systemInfo = function(sys) {
+            var info = colonyMan.colonies.tryGet(sys.name);
             if (info) {
                 info = {
                     income: info.income,
@@ -935,45 +1048,47 @@ var world = (function() {
         };
         
         // Visit a system
-        this.visit = function(sys) {
-            me._visitedSystems.set(sys.name, sys.civs());
+        me.visit = function(sys) {
+            visitedSystems.set(sys.name, sys.civs());
         };
         
         // Check if a system has been visited
-        this.visited = function(sys) {
-            return me._systems.has(sys.name) || me._visitedSystems.has(sys.name);
+        me.visited = function(sys) {
+            return systems.has(sys.name) || visitedSystems.has(sys.name);
         };
         
         // Returns the civilizations the current civilization knows exist in the given system
-        this.civsIn = function(sys) {
-            if (me._systems.has(sys.name))
+        me.civsIn = function(sys) {
+            if (systems.has(sys.name))
                 return sys.civs();
-            return me._visitedSystems.tryGet(sys.name, []);
+            return visitedSystems.tryGet(sys.name, []);
         };
         
         // Returns the ships the current civilization knows exist in the system
-        this.shipsIn = function(sys) {
+        me.shipsIn = function(sys) {
             if (me.visited(sys))
                 return sys.ships.values();
             return [];
         };
         
-        this.update = function() {
-            me.money += me.income;
-            me._colonyMan.update();
-            me.income = me._colonyMan.income;
+        me.update = function() {
+            money += income;
+            colonyMan.update();
+            income = colonyMan.income();
         };
     };
 
     // Represents the universe
     ns.Universe = function(width, height, systems) {
         var me = this;
-        this.deepspace = new ns.DeepSpace();
-        this._sysnames = new core.Hashtable();
-        this._syscoords = new core.Hashtable();
-        this.civs = new core.Hashtable();
-        this.width = width;
-        this.height = height;
+        var sysnames = new core.Hashtable();
+        var syscoords = new core.Hashtable();
+        core.defineProps(me, {
+            deepspace: new ns.DeepSpace(),
+            civs: new core.Hashtable(),
+            width: width,
+            height: height
+        });
         
         // Used to transform the system coordinates into a string
         function sysCoordId(row, col) {
@@ -982,8 +1097,8 @@ var world = (function() {
 
         // Helps adding a system to the universe
         function addSystem(system) {
-            me._sysnames.set(system.name, system);
-            me._syscoords.set(sysCoordId(system.pos.row, system.pos.col), system);
+            sysnames.set(system.name, system);
+            syscoords.set(sysCoordId(system.pos.row, system.pos.col), system);
         };
         
         // Adds the system
@@ -992,28 +1107,28 @@ var world = (function() {
         }
         
         // Returns the system with the given name
-        this.sys = function(name) {
-            return me._sysnames.get(name);
+        me.sys = function(name) {
+            return sysnames.get(name);
         };
 
         // Returns the name of the system at the given location
-        this.sysAt = function(row, col) {
-            return me._syscoords.tryGet(sysCoordId(row, col));
+        me.sysAt = function(row, col) {
+            return syscoords.tryGet(sysCoordId(row, col));
         };
         
         // Calculates the distance between two systems in tiles
-        this.distance = function(sys1, sys2) {
+        me.distance = function(sys1, sys2) {
             var rows = Math.abs(sys1.pos.row - sys2.pos.row);
             var cols = Math.abs(sys1.pos.col - sys2.pos.col);
             return core.pythagoras(rows, cols);
         };
         
         // Get all the systems
-        this.getSystems = function() {
-            return me._sysnames.values();
+        me.getSystems = function() {
+            return sysnames.values();
         };
         
-        this.update = function() {
+        me.update = function() {
             me.deepspace.update();
             me.civs.forEach(function(civ) {
                 civ.update();

@@ -31,13 +31,23 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     this._mapping[world.PlanetType.EXOTIC] = 'exotic_planet.png';
     this._mapping[world.PlanetType.GAS_GIANT] = 'gas_giant.png';
     this._mapping[world.PlanetType.ICE_GIANT] = 'ice_giant.png';
-    this._mapping[world.PlanetType.ASTEROID_FIELD] = 'asteroid_field.png';
+
+    this._mapping[world.AsteroidType.CARBONACEOUS] = 'asteroid_field.png';
+    this._mapping[world.AsteroidType.SILICATE] = 'asteroid_field.png';
+    this._mapping[world.AsteroidType.METAL_RICH] = 'asteroid_field.png';
     
     // Setup the mapping of the star type to the images (THIS SUCKS AS WELL!!!)
     this._starType = {};
     this._starType[world.StarType.BLUE] = 'blue_star.png';
     this._starType[world.StarType.RED] = 'red_star.png';
     this._starType[world.StarType.YELLOW] = 'yellow_star.png';
+
+    function image(type) {
+        if (!(typeof type === 'string' || type instanceof String)) {
+            throw new TypeError('Expecting string');
+        }
+        return 'grfx/' + me._mapping[type];
+    }
     
     // Returns the system
     this.sys = function() {
@@ -60,7 +70,7 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
                             })
                         )
                     ),
-                    displayPlanets(sys)
+                    displaySysObjs(sys)
                 )
             )
         );
@@ -95,7 +105,7 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     }
     
     // Displays the planets (or not)
-    function displayPlanets(sys) {
+    function displaySysObjs(sys) {
         var count = 0;
         var hasColShip = sys.ships.exists(function(ship) {
             return ship.civ() === player && ship.check(ModuleFlags.COLONY);
@@ -104,19 +114,19 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
             var result = td().append('System has not been visited')
         }
         else {
-            var result = sys.planets.map(function(planet) {
+            var result = sys.sysObjects().map(function(sysObj) {
                 ++count;
                 return td('paddedLeft').append(
                     div('centeredText').append(
                         div('planet').append(
-                            img().attr('src', 'grfx/' + me._mapping[planet.type]),
+                            img().attr('src', image(sysObj.type)),
                             button('knowMore').text('Get facts').click(function() {
-                                uipipe.showPlanet(planet);
+                                uipipe.showWorld(sysObj);
                             })
                         ),
                         p().append(
-                            sys.name + ' ' + planet.order,
-                            planetInfo(player, parent, planet, hasColShip)
+                            sysObj.name,
+                            sysObjInfo(player, parent, sysObj, hasColShip)
                         )
                     )
                 )
@@ -126,17 +136,15 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     }
     
     // Shows the planet information
-    function planetInfo(player, parent, planet, hasColShip) {
-        var result = colonyInfo(player, parent, planet, hasColShip);
-        var clazz = div().html('Class ' + planet.clazz);
-        result.splice(0, 0, clazz);
-        var winfo = div().html(worldInfo(planet.type));
+    function sysObjInfo(player, parent, sysObj, hasColShip) {
+        var result = colonyInfo(player, parent, sysObj, hasColShip);
+        var winfo = div().html(worldInfo(sysObj.type));
         return div('dispSmall').append(winfo, result);
     }
     
     // What to show about a planet type
-    function worldInfo(planetType) {
-        var info = planetType;
+    function worldInfo(type) {
+        var info = type;
         if (info !== world.PlanetType.GAS_GIANT &&
             info !== world.PlanetType.ICE_GIANT &&
             info !== world.PlanetType.ASTEROID_FIELD) {
@@ -146,19 +154,19 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     }
     
     // Creates the colony information div
-    function colonyInfo(player, parent, planet, hasColShip) {
-        var colony = planet.colony;
+    function colonyInfo(player, parent, sysObj, hasColShip) {
+        var colony = sysObj.colony();
         var colInfo = div();
         var popInfo = div().append(populationInfo(player, colony));
         if (colony) {
-            colInfo.html(colony.civ === player ? 'Colonized' : 'Colonized by ' + colony.civ.name);
+            colInfo.html(colony.civ() === player ? 'Colonized' : 'Colonized by ' + colony.civ().name);
         }
         else if (hasColShip) {
             var btn = button().attr('type', 'button').html('Colonize');
             btn.click(function() {
                 // Colonize the planet and update the system view and ship bar
-                player.colonize(planet);
-                uipipe.updateShipBar(planet.sys);
+                player.colonize(sysObj);
+                uipipe.updateShipBar(sysObj.sys);
                 me.display(player, parent);
                 popInfo.empty().append(populationInfo(player, colony));
             });
@@ -173,8 +181,8 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
     // Creates the population info text
     function populationInfo(player, colony) {
         if (colony) {
-            var info = colony.civ === player ?
-                       Math.floor(colony.population * 10) / 10 + ' / ' + colony.maxPopulation :
+            var info = colony.civ() === player ?
+                       Math.floor(colony.population() * 10) / 10 + ' / ' + colony.maxPopulation() :
                        '???'
             return 'Population: ' + info;
         }
@@ -215,6 +223,7 @@ ui.SystemView = function(player, uni, uipipe, selector, parent) {
         if (content.length > 0) {
             parent.append(constEntry(content[0], true).addClass('constListBuilding'));
             for (var i = 1, len = content.length; i < len; i++) {
+
                 parent.append(constEntry(content[i], false));
             }
         }
